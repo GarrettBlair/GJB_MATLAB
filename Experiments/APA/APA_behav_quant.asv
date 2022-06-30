@@ -20,7 +20,7 @@ arena_radius = 40; % in cm
 pos_bins = -40:4:40; % in cm, x and y
 speed_thresh = 5; % speed thresh in cm/sec
 smoothing_interval = .5; % in seconds, length of smoothing kernel
-occupancy_thresh = 1; % in seconds, minimum time in each bin to be counted for place map
+
 
 rotate_behav = true;
 nan_interp = true;
@@ -177,8 +177,6 @@ nbins = length(pos_bins)-1;
 vmap_room(vmap_room<1) = NaN;
 vmap_arena(vmap_arena<1) = NaN;
 nsegs = size(ms.neuron.S, 1);
-spkmap_room = NaN(nsegs, nbins, nbins);
-spkmap_arena = NaN(nsegs, nbins, nbins);
 pfield_room = NaN(nsegs, nbins, nbins);
 pfield_arena = NaN(nsegs, nbins, nbins);
 pfield_room_smooth = NaN(nsegs, nbins, nbins);
@@ -191,8 +189,7 @@ ms.arena.speed_smooth = conv(ms.arena.speed, kern, 'same');
 is_moving = ms.arena.speed_smooth>speed_thresh;
 for i = 1:nsegs
     [smap, ~] = make_occupancymap_2D(ms.room.x(is_moving),  ms.room.y(is_moving),  spks(i,(is_moving)), pos_bins, pos_bins);
-    smap(vmap_room<occupancy_thresh) = NaN;
-    spkmap_room(i,:,:) = smap;
+    smap(vmap_room<1) = NaN;
     pfield_room(i,:,:) = smap./vmap_room;
     smap(isnan(smap)) = 0;
     sm_smap = conv2(smap, smoothing_kern, 'same');
@@ -200,15 +197,15 @@ for i = 1:nsegs
     pfield_room_smooth(i,:,:) = sm_smap./vmap_room;
     
     [smap, ~] = make_occupancymap_2D(ms.arena.x(is_moving), ms.arena.y(is_moving), spks(i,(is_moving)), pos_bins, pos_bins);
-    smap(vmap_arena<occupancy_thresh) = NaN;
-    spkmap_arena(i,:,:) = smap;
+    smap(vmap_arena<1) = NaN;
     pfield_arena(i,:,:) = smap./vmap_arena;
     smap(isnan(smap)) = 0;
     sm_smap = conv2(smap, smoothing_kern, 'same');
     sm_smap(isnan(vmap_arena)) = NaN;
     pfield_arena_smooth(i,:,:) = sm_smap./vmap_arena;
 end
-[p] = place_cell_stats(spks, pfield_arena_smooth, spkmap_arena, vmap_arena);
+
+[p] = place_cell_stats(spks, pfield_arena_smooth, spike_maps, occupancy_map)
 %%
 nc = ceil(sqrt(nsegs));
 figure(10); clf; 
