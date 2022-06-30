@@ -16,14 +16,18 @@ ORI_Data = readtable(msOriFile);
 
 %%
 % plot3(behav.xc, behav.yc, behav.timestamps)
-arena_radius = 40; % in cm
-pos_bins = -40:4:40; % in cm, x and y
-speed_thresh = 5; % speed thresh in cm/sec
-smoothing_interval = .5; % in seconds, length of smoothing kernel
+params.arena_radius             = 40; % in cm
+params.pos_bins                 = -40:4:40; % in cm, x and y
+params.speed_thresh             = 5; % speed thresh in cm/sec
+params.behav_smoothing_interval = .5; % in seconds, length of smoothing kernel
+params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
+params.pfield_kernel_size       = 5;
+params.rotate_behav             = true;
+params.nan_interp               = true;
 
 
-rotate_behav = true;
-nan_interp = true;
+
+
 nanind = behav.x==0 & behav.y == 0;
 %
 x = behav.x;
@@ -36,7 +40,7 @@ if length(unique(t)) ~= length(t)
     t(ind) = t(ind)+1;
 end
 ts = t./1000;
-if nan_interp && any(~nanind)
+if params.nan_interp && any(~nanind)
     nanind = (isnan(x) & isnan(y));
     xn = interp1(ts(~nanind), x(~nanind), ts(nanind), 'linear');
     yn = interp1(ts(~nanind), y(~nanind), ts(nanind), 'linear');
@@ -44,11 +48,11 @@ if nan_interp && any(~nanind)
 end
 behav.wasnan = nanind;
 
-x = arena_radius*(x-params.center(1))./params.radius;
-y = arena_radius*(y-params.center(2))./params.radius;
+x = params.arena_radius*(x-params.center(1))./params.radius;
+y = params.arena_radius*(y-params.center(2))./params.radius;
 % x = movmedian(x, round(params.behav_fps/2));
 % y = movmedian(y, round(params.behav_fps/2));
-ksize = round(params.behav_fps*smoothing_interval);
+ksize = round(params.behav_fps*params.behav_smoothing_interval);
 kern = ones(ksize, 1); kern = kern./sum(kern(:));
 x = conv(x, kern, 'same');
 y = conv(y, kern, 'same');
@@ -61,18 +65,18 @@ ay = behav.arena_y;
 nanind = behav.arena_x==0 & behav.arena_y == 0;
 ax(nanind) = NaN;
 ay(nanind) = NaN;
-ax = arena_radius*(ax-params.center(1))./params.radius;
-ay = arena_radius*(ay-params.center(2))./params.radius;
+ax = params.arena_radius*(ax-params.center(1))./params.radius;
+ay = params.arena_radius*(ay-params.center(2))./params.radius;
 
 distsRAT = sqrt((x -  0).^2  + (y - 0).^2);
 distsLED = sqrt((ax - 0).^2 + (ay - 0).^2);
-nanind = distsLED<=50 & distsLED<=-50; % 100 cm ring threshold for excluding arena LED
+nanind = distsLED<=params.arena_radius*1.2 & distsLED<=params.arena_radius*-1.2; % 100 cm ring threshold for excluding arena LED
 ax(nanind) = NaN;
 ay(nanind) = NaN;
 %     t = behav.timestamps;
 
 %
-if nan_interp && any(~nanind)
+if params.nan_interp && any(~nanind)
     nanind = (isnan(ax) & isnan(ay));
     xn = interp1(ts(~nanind), ax(~nanind), ts(nanind), 'spline');
     yn = interp1(ts(~nanind), ay(~nanind), ts(nanind), 'spline');
@@ -82,8 +86,6 @@ end
 % ay = conv(ay, kern, 'same');
 % ax = movmedian(ax, ksize);
 % ay = movmedian(ay, ksize);
-
-
 
 [theta1,rho1] = cart2pol(x,y);
 [theta2,rho2] = cart2pol(ax,ay);
@@ -165,49 +167,29 @@ ms.arena.x = interp1(t, xx, ms.timestamps, 'linear');
 ms.arena.y = interp1(t, yy, ms.timestamps, 'linear');
 ms.arena.led_x = interp1(t, axx, ms.timestamps, 'linear');
 ms.arena.led_y = interp1(t, ayy, ms.timestamps, 'linear');
-ms.neuron = neuron;
 ms_dt = [median(diff(ms.timestamps)); diff([ms.timestamps])]/1000;
 ms.dt = ms_dt;
 ms.room.speed = sqrt(diff([ms.room.x(1); ms.room.x]).^2 + diff([ms.room.y(1); ms.room.y]).^2)./ms_dt;
 ms.arena.speed = sqrt(diff([ms.arena.x(1); ms.arena.x]).^2 + diff([ms.arena.y(1); ms.arena.y]).^2)./ms_dt;
-
-nbins = length(pos_bins)-1;
-[vmap_room, vmap_room_counts]   = make_occupancymap_2D(ms.room.x, ms.room.y, ms.timestamps/1000, pos_bins, pos_bins);
-[vmap_arena, vmap_arena_counts] = make_occupancymap_2D(ms.arena.x, ms.arena.y, ms.timestamps/1000, pos_bins, pos_bins);
-vmap_room(vmap_room<1) = NaN;
-vmap_arena(vmap_arena<1) = NaN;
-nsegs = size(ms.neuron.S, 1);
-pfield_room = NaN(nsegs, nbins, nbins);
-pfield_arena = NaN(nsegs, nbins, nbins);
-pfield_room_smooth = NaN(nsegs, nbins, nbins);
-pfield_arena_smooth = NaN(nsegs, nbins, nbins);
-spks = normalize_rows(ms.neuron.S);
-smoothing_kern = ones(5,5); smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
-
 ms.room.speed_smooth = conv(ms.room.speed,   kern, 'same');
 ms.arena.speed_smooth = conv(ms.arena.speed, kern, 'same');
-is_moving = ms.arena.speed_smooth>speed_thresh;
-for i = 1:nsegs
-    [smap, ~] = make_occupancymap_2D(ms.room.x(is_moving),  ms.room.y(is_moving),  spks(i,(is_moving)), pos_bins, pos_bins);
-    smap(vmap_room<1) = NaN;
-    pfield_room(i,:,:) = smap./vmap_room;
-    smap(isnan(smap)) = 0;
-    sm_smap = conv2(smap, smoothing_kern, 'same');
-    sm_smap(isnan(vmap_room)) = NaN;
-    pfield_room_smooth(i,:,:) = sm_smap./vmap_room;
-    
-    [smap, ~] = make_occupancymap_2D(ms.arena.x(is_moving), ms.arena.y(is_moving), spks(i,(is_moving)), pos_bins, pos_bins);
-    smap(vmap_arena<1) = NaN;
-    pfield_arena(i,:,:) = smap./vmap_arena;
-    smap(isnan(smap)) = 0;
-    sm_smap = conv2(smap, smoothing_kern, 'same');
-    sm_smap(isnan(vmap_arena)) = NaN;
-    pfield_arena_smooth(i,:,:) = sm_smap./vmap_arena;
-end
+is_moving = ms.arena.speed_smooth>params.speed_thresh;
+ms.is_moving = is_moving;
+ms.neuron = neuron;
 
-[p] = place_cell_stats(spks, pfield_arena_smooth, spike_maps, occupancy_map)
+
+temp_ts = cat(1, ms.timestamps, ms.timestamps(end))./1000;
+dt = abs(diff(temp_ts));
+[ms.room]  = construct_place_maps(ms.room,   ms.room.x(is_moving), ms.room.y(is_moving),  dt(is_moving), spks(:, is_moving), params);
+[ms.arena] = construct_place_maps(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), dt(is_moving), spks(:, is_moving), params);
+
+[p] = place_cell_stats(spks, pfield_arena_smooth, spkmap_arena, vmap_arena);
 %%
-nc = ceil(sqrt(nsegs));
+ss = get(0,'screensize');
+ar = mean([1, ss(3)/ss(4)])-1;
+n = ceil(sqrt(nsegs));
+nc = round(n*(1-ar));
+nr = round(n*(1+ar));
 figure(10); clf; 
 set(gcf, 'Name', 'ARENA FRAME')
 colormap(plasma)
@@ -215,21 +197,20 @@ figure(11); clf
 set(gcf, 'Name', 'ROOM FRAME')
 colormap(viridis)
 
-arena_alpha = ~isnan(vmap_arena);
-room_alpha = ~isnan(vmap_room);
-imAlpha(isnan(vmap_room))=0;
+arena_alpha = ~isnan(ms.arena.vmap);
+room_alpha = ~isnan(ms.room.vmap);
     figure(10);
 for i = 1:nsegs
-    subplot_tight(nc, nc, i, [.01 .01])
-    p = squeeze(pfield_arena_smooth(i,:,:));
+    subplot_tight(nc, nr, i, [.01 .01])
+    p = squeeze(ms.arena.pfields(i,:,:));
     p = p./max(p(:));
     imagesc(p, 'AlphaData', arena_alpha);
     axis square off
 end
     figure(11);
 for i = 1:nsegs
-    subplot_tight(nc, nc, i, [.01 .01])
-    p = squeeze(pfield_room_smooth(i,:,:));
+    subplot_tight(nc, nr, i, [.01 .01])
+    p = squeeze(pfield_room(i,:,:));
     p = p./max(p(:));
     imagesc(p, 'AlphaData', room_alpha);
     axis square off
@@ -261,16 +242,19 @@ imagesc(pco_prob);
 %     s = spks(i,:)*scale;
 %     plot(s + i - 1, 'r')
 % end
-ori_ts = ORI_Data.TimeStamp_ms_;
+ori_ts = ORI_Data.TimeStamp_ms_(1:ms.temporalDownsample:end);
 q = [ORI_Data.qw, ORI_Data.qx, ORI_Data.qy, ORI_Data.qx];
+q = q(1:ms.temporalDownsample:end, :);
 [~, roll, pitch, yaw] = quatern2rotMat_Daniel(q);
-ms.ori = ORI_Data;
-ms.time = ms.timestamps;
+ms.ori = ORI_Data(1:ms.temporalDownsample:end, :);
 [ori_str] = LFOV_ori_extract(q, [0:30:360]);
-
 
 ms.roll = roll; ms.pitch = pitch; ms.yaw = yaw;
 figure; hold on; plot(roll, 'r.'); plot(pitch, 'm.'); plot(yaw, 'y.')
+
+yaw_bin = [-pi:pi/8:pi];
+[vmap_yaw, vmap_yaw_c]   = make_occupancymap_1D(ori_str.yaw, ms.timestamps/1000, yaw_bin);
+
 %%
 figure(3); clf;
 subplot(2,2,1)
