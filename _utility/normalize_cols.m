@@ -1,0 +1,12 @@
+function [mat] = normalize_cols(mat)
+dim = 2;
+mat = mat';
+
+min_mat = min(mat, [], dim)*ones(1, size(mat,dim));
+mat = mat - min_mat;
+max_mat = max(mat, [], dim)*ones(1, size(mat,dim));
+mat = mat./max_mat;
+mat = round(mat*10000)/10000;
+
+mat = mat';
+end

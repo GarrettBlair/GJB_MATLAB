@@ -1,0 +1,37 @@
+% recording_folder = 'E:\Fenton Si probes\RAT2_2022_02_26\aboveCC_CG\2022-02-26_14-48-47';
+recording_folder = 'C:\Users\gjb326\Desktop\Sample Data\Fenton Si probes\RAT2_2022_02_26\aboveCC_CG\2022-02-26_14-48-47';
+json_file = '\Record Node 101\experiment1\recording1\structure.oebin';
+
+fname = strcat(recording_folder, json_file);
+
+input_index = 1;
+
+
+A = load_open_ephys_binary(fname, 'continuous', input_index);
+
+
+% all channels should have the same bitvolt value
+bv = A.Header.channels(1).bit_volts;
+% NOTE: openephys auto recorded 32 channels, the probe only has 16 (channels 9:24)
+D = bv*A.Data(9:24,:); 
+ts = A.Timestamps;
+
+%%%%% Channel groupings %%%%%
+g1 = [4 2 7 5];
+g2 = [4 2 7 5];
+g1 = [4 2 7 5];
+g1 = [4 2 7 5];
+
+
+%%
+% inds = 1:size(D,2);
+dec = floor(size(D,2)*.1);
+inds = 6*dec:7*dec; % plot a smaller portion of the data
+figure; clf; 
+hold on
+ch2plt = [1:16];%[2 4 5 7]; % if you only want a couple
+for i = 1:length(ch2plt)
+    single_channel = D(ch2plt(i),(inds));
+    single_channel = single_channel/300; % arbitrary scaling
+    plot(ts(inds), single_channel + i);    
+end
