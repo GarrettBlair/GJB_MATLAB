@@ -39,7 +39,8 @@ if ~isempty(bad_seg_idx)
     if ~isrow(bad_seg_idx)
         bad_seg_idx = bad_seg_idx';
     end
-    neuron.idx_components_bad = [neuron.idx_components_bad bad_seg_idx];
+    neuron.idx_components_bad = unique([neuron.idx_components_bad bad_seg_idx]);
+    neuron.idx_components = good_idx;
 end
 %     good_idx = setdiff([1:size(neuron.A,2)], bad_seg_idx);
 %     neuron.A         = neuron.A(:, good_idx);

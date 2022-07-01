@@ -1,4 +1,4 @@
-function [vmap_time, vmap_counts] = make_occupancymap_1D(pos_x, timestamps, bins_x)
+function [vmap_time, vmap_counts] = make_occupancymap_1D(pos_x, signal, bins_x)
 %%
 %%%% INPUT:
 % pos_x, pos_y   = x,y values of position samples, should be speed filtered already
@@ -15,15 +15,10 @@ function [vmap_time, vmap_counts] = make_occupancymap_1D(pos_x, timestamps, bins
 if isrow(pos_x)
     pos_x = pos_x';
 end
-if isrow(timestamps)
-    timestamps = timestamps';
+if isrow(signal)
+    signal = signal';
 end
 
-temp_ts = cat(1, timestamps, timestamps(end));
-dt = abs(diff(temp_ts));
-if median(dt)>1 % probably sampled in milliseconds
-    warning('Variable ''timestamps'' should be given in seconds, and it appears to be smaller')
-end
 
 nx_bins = length(bins_x)-1;
 [vmap_counts, ~, xbin] = histcounts(pos_x, bins_x);
@@ -31,7 +26,7 @@ vmap_time = NaN(nx_bins, 1);
 for i=1:nx_bins
     if any(i==xbin)
         currentbin = i==xbin;
-        vmap_time(i, 1) = sum(dt(currentbin));
+        vmap_time(i, 1) = sum(signal(currentbin));
     end
 end
 

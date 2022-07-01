@@ -1,12 +1,12 @@
-function [struct_in] = construct_place_maps(struct_in, x, y, dt, spks, params)
+function [struct_in] = construct_place_maps_2D(struct_in, x, y, dt, spks, bins, params)
 % input data should already be speed thresholded
-pos_bins = params.pos_bins;
-ksize = params.pfield_kernel_size;
+% pos_bins = params.pos_bins;
+ksize = params.pfield_kernel_radius;
 occupancy_thresh = params.occupancy_thresh;
 
 
-nbins = length(pos_bins)-1;
-[vmap, ~]   = make_occupancymap_2D(x, y, dt, pos_bins, pos_bins);
+nbins = length(bins)-1;
+[vmap, ~]   = make_occupancymap_2D(x, y, dt, bins, bins);
 % vmap(vmap<occupancy_thresh) = NaN;
 nsegs = size(spks, 1);
 spkmap = NaN(nsegs, nbins, nbins);
@@ -14,15 +14,15 @@ pfields = NaN(nsegs, nbins, nbins);
 pfields_smooth = NaN(nsegs, nbins, nbins);
 
 % smoothing_kern = ones(ksize,ksize); smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
-% smoothing_kern = gausswin(ksize*2+1);
-smoothing_kern = gausswin(ksize+1);
+smoothing_kern = gausswin(ksize*2+1);
+% smoothing_kern = gausswin(ksize+1);
 smoothing_kern = smoothing_kern*smoothing_kern';
 smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
 
 for i = 1:nsegs
     %%
     % generate the spk map
-    [smap, ~] = make_occupancymap_2D(x,  y,  spks(i, :), pos_bins, pos_bins);
+    [smap, ~] = make_occupancymap_2D(x,  y,  spks(i, :), bins, bins);
     % threshold based on occupancy
     smap(vmap<occupancy_thresh) = NaN;
     spkmap(i,:,:) = smap;
@@ -34,17 +34,18 @@ for i = 1:nsegs
     % remove the unvisited areas
     sm_smap(isnan(vmap)) = NaN;
     pfields_smooth(i,:,:) = sm_smap./vmap;
-    
-    figure(99); clf
-    subplot(2,2,1)
-    imagesc(vmap);
-    subplot(2,2,2)
-    imagesc(smap);
-    subplot(2,2,3)
-    imagesc(sm_smap);
-    subplot(2,2,4)
-    imagesc(sm_smap./vmap);
-    drawnow
+    if false % for plotting and checking
+        figure(99); clf
+        subplot(2,2,1)
+        imagesc(vmap);
+        subplot(2,2,2)
+        imagesc(smap);
+        subplot(2,2,3)
+        imagesc(sm_smap);
+        subplot(2,2,4)
+        imagesc(sm_smap./vmap);
+        drawnow
+    end
 end
 struct_in.vmap = vmap;
 struct_in.spkmap = spkmap;

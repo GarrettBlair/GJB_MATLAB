@@ -10,6 +10,10 @@ msOriFile = sprintf('%s/MiniLFOV/headOrientation.csv', topdir);
 % Read in the coresponding files
 [behav, params] = read_APA_csv(fname_position, fname_params);
 caiman_data = load(caimanFilename);
+% correct for python indexing start at 0
+caiman_data.idx_components_bad = caiman_data.idx_components_bad+1;
+caiman_data.idx_components = caiman_data.idx_components+1;
+
 TS_data = readtable(msTSFile);
 crop_params = load(msCropFile);
 ORI_Data = readtable(msOriFile);
@@ -21,10 +25,10 @@ params.pos_bins                 = -40:4:40; % in cm, x and y
 params.speed_thresh             = 5; % speed thresh in cm/sec
 params.behav_smoothing_interval = .5; % in seconds, length of smoothing kernel
 params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
-params.pfield_kernel_size       = 5;
+params.pfield_kernel_radius     = 3; % kernel ends up being [n*2 + 1] in bins
 params.rotate_behav             = true;
 params.nan_interp               = true;
-
+params.correct_dt               = true; % correct for large jumps in timestamp file when constructing vmap
 
 
 
@@ -103,6 +107,21 @@ rhodiff = rho2-median(rho2); % small fluctation of maze position from being offc
 % arena.dt
 
 behav_dt = [median(diff(behav.timestamps)); diff([behav.timestamps])]/1000;
+behav.dt = behav_dt;
+if params.correct_dt
+    % sometimes the camera will disconnect and reconnect, with large jumps
+    % in the timestamp file
+    bad_dt_thresh = mean(behav_dt)+10*std(behav_dt);
+    bad_vals = behav_dt >= bad_dt_thresh;
+    if sum(bad_vals)/length(behav_dt)>.01
+       warning('Many bad values found in timestamp dt, should check!') 
+    end
+    behav_dt(bad_vals) = median(behav_dt);
+end
+behav.dt_corrected = behav_dt;
+
+
+
 behav.spd_roomframe = sqrt(diff([x(1); x]).^2 + diff([y(1); y]).^2)./behav_dt;
 behav.spd_arenaframe = sqrt(diff([xx(1); xx]).^2 + diff([yy(1); yy]).^2)./behav_dt;
 % adt = [median(diff(behav.timestamps)); diff([behav.timestamps])]/1000;
@@ -148,7 +167,9 @@ end
 %% Cull contours
 [good_inds, bad_inds, ~, bounds] = Draw_contour_bounding(caiman_data.fullA, ...
     caiman_data.dims, caiman_data.maxFrame, [], false);
-neuron = remove_segments(caiman_data, [caiman_data.idx_components_bad, bad_inds'], true);
+allbad = uni[caiman_data.idx_components_bad, bad_inds'];
+fprintf('\nRemoving %d bad components\n', length(allbad))
+neuron = remove_segments(caiman_data, allbad, false);
 %%
 ms = [];
 ms.spatialDownsample = crop_params.spatialDownSample;
@@ -167,8 +188,21 @@ ms.arena.x = interp1(t, xx, ms.timestamps, 'linear');
 ms.arena.y = interp1(t, yy, ms.timestamps, 'linear');
 ms.arena.led_x = interp1(t, axx, ms.timestamps, 'linear');
 ms.arena.led_y = interp1(t, ayy, ms.timestamps, 'linear');
+
 ms_dt = [median(diff(ms.timestamps)); diff([ms.timestamps])]/1000;
 ms.dt = ms_dt;
+if params.correct_dt
+    % sometimes the camera will disconnect and reconnect, with large jumps
+    % in the timestamp file
+    bad_dt_thresh = mean(ms_dt)+10*std(ms_dt);
+    bad_vals = ms_dt >= bad_dt_thresh;
+    if sum(bad_vals)/length(ms_dt)>.01
+       warning('Many bad values found in timestamp dt, should check! %d%% bad', ceil(100*sum(bad_vals)/length(ms_dt))) 
+    end
+    ms_dt(ms_dt >= bad_dt_thresh) = median(ms_dt);
+end
+ms.dt_corrected = ms_dt;
+
 ms.room.speed = sqrt(diff([ms.room.x(1); ms.room.x]).^2 + diff([ms.room.y(1); ms.room.y]).^2)./ms_dt;
 ms.arena.speed = sqrt(diff([ms.arena.x(1); ms.arena.x]).^2 + diff([ms.arena.y(1); ms.arena.y]).^2)./ms_dt;
 ms.room.speed_smooth = conv(ms.room.speed,   kern, 'same');
@@ -177,19 +211,23 @@ is_moving = ms.arena.speed_smooth>params.speed_thresh;
 ms.is_moving = is_moving;
 ms.neuron = neuron;
 
-
+spks = normalize_rows(ms.neuron.S);
 temp_ts = cat(1, ms.timestamps, ms.timestamps(end))./1000;
 dt = abs(diff(temp_ts));
-[ms.room]  = construct_place_maps(ms.room,   ms.room.x(is_moving), ms.room.y(is_moving),  dt(is_moving), spks(:, is_moving), params);
-[ms.arena] = construct_place_maps(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), dt(is_moving), spks(:, is_moving), params);
+[ms.room]  = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  dt(is_moving), spks(:, is_moving), params.pos_bins, params);
+[ms.arena] = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), dt(is_moving), spks(:, is_moving), params.pos_bins, params);
 
-[p] = place_cell_stats(spks, pfield_arena_smooth, spkmap_arena, vmap_arena);
+[a] = place_cell_stats(spks, ms.arena.pfields, ms.arena.spkmap, ms.arena.vmap);
+[r] = place_cell_stats(spks, ms.room.pfields,  ms.room.spkmap,  ms.room.vmap);
 %%
+% seting up optimal density subplot
+nsegs = size(spks,1);
 ss = get(0,'screensize');
 ar = mean([1, ss(3)/ss(4)])-1;
 n = ceil(sqrt(nsegs));
 nc = round(n*(1-ar));
 nr = round(n*(1+ar));
+
 figure(10); clf; 
 set(gcf, 'Name', 'ARENA FRAME')
 colormap(plasma)
@@ -197,22 +235,24 @@ figure(11); clf
 set(gcf, 'Name', 'ROOM FRAME')
 colormap(viridis)
 
-arena_alpha = ~isnan(ms.arena.vmap);
-room_alpha = ~isnan(ms.room.vmap);
+ms.arena.pfield_alpha = ~isnan(ms.arena.vmap);
+ms.room.pfield_alpha = ~isnan(ms.room.vmap);
     figure(10);
 for i = 1:nsegs
     subplot_tight(nc, nr, i, [.01 .01])
-    p = squeeze(ms.arena.pfields(i,:,:));
+    p = squeeze(ms.arena.pfields_smooth(i,:,:));
+%     p = squeeze(ms.arena.pfields(i,:,:));
     p = p./max(p(:));
-    imagesc(p, 'AlphaData', arena_alpha);
+    imagesc(p, 'AlphaData', ms.arena.pfield_alpha);
     axis square off
 end
     figure(11);
 for i = 1:nsegs
     subplot_tight(nc, nr, i, [.01 .01])
-    p = squeeze(pfield_room(i,:,:));
+    p = squeeze(ms.room.pfields_smooth(i,:,:));
+%     p = squeeze(ms.room.pfields(i,:,:));
     p = p./max(p(:));
-    imagesc(p, 'AlphaData', room_alpha);
+    imagesc(p, 'AlphaData', ms.room.pfield_alpha);
     axis square off
 end
 
@@ -254,6 +294,9 @@ figure; hold on; plot(roll, 'r.'); plot(pitch, 'm.'); plot(yaw, 'y.')
 
 yaw_bin = [-pi:pi/8:pi];
 [vmap_yaw, vmap_yaw_c]   = make_occupancymap_1D(ori_str.yaw, ms.timestamps/1000, yaw_bin);
+
+[ori_str] = construct_place_maps_1D(ori_str, ori_str.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), yaw_bin, params);
+figure; imagesc(ori_str.pfields_smooth)
 
 %%
 figure(3); clf;
