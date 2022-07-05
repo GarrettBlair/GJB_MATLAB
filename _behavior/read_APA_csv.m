@@ -20,15 +20,15 @@ function [behav, params] = read_APA_csv(fname_position, fname_params)
             a = strfind(temp, '(');
             b = strfind(temp, ',');
             c = strfind(temp, ')');
-            if ~isempty(a) % it's not a tuple
-                warning('\ntuple found  -  %s = %s', names{i}, temp)
+            if ~isempty(a) % it's a tuple
+%                 warning('\ntuple found  -  %s = %s', names{i}, temp)
                 inds = [a b c]; 
                 temp2 = [str2double(temp(inds(1)+1:inds(2)-1))];
                 for j = 1:length(b)
                     temp2 = [temp2, str2double(temp(inds(j+1)+1:inds(j+2)-1))];
                 end
                 temp = temp2;
-            else
+            else % not a tuple
                 warning('\nBad value!  -  %s', names{i})
                 temp = NaN;
             end

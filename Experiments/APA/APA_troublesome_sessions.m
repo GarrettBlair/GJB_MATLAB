@@ -1,0 +1,19 @@
+function [is_bad, bad_sessns] = APA_troublesome_sessions(varargin)
+bad_sessns = {...
+    'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_10/18_25_10/'...
+    'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_14/20_00_14/'...
+    'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_14/20_16_24/'...
+    'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_14/20_21_33/'...
+    'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_14/20_24_52/'};% ...
+
+if nargin == 1
+   nbad = length(bad_sessns); 
+   check_dirs = varargin{1};
+   num2check = length(check_dirs);
+   is_bad = false(nbad, num2check);
+    for i = 1:nbad
+        for j = 1:num2check
+            is_bad(i,j) = strcmp(bad_sessns{i}, check_dirs{j});
+        end
+    end
+end
