@@ -1,24 +1,69 @@
-function [ms] = APA_generate_placmaps(ms, params)
+function [ms] = APA_generate_placemaps(ms, params)
 caimanFilename = sprintf('%s/MiniLFOV/caiman_cnmfe_out.mat', ms.parentDir);
+sminSweepFilename = sprintf('%s/MiniLFOV/deconv_sweep.mat', ms.parentDir);
 caiman_data = load(caimanFilename);
-% correct for python indexing start at 0
-caiman_data.idx_components_bad = caiman_data.idx_components_bad+1;
-caiman_data.idx_components = caiman_data.idx_components+1;
 
 %% Cull contours
-[good_inds, bad_inds, ~, bounds] = Draw_contour_bounding(caiman_data.fullA, ...
-    caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, false);
-allbad = unique([caiman_data.idx_components_bad, bad_inds']);
+% correct for python indexing start at 0
+% caiman_data.idx_components_bad = caiman_data.idx_components_bad+1;
+% caiman_data.idx_components = caiman_data.idx_components+1;
+[nsegs,nframes] = size(caiman_data.C);
+
+[smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
+all_good_idx = find(sum(good_idx,1)==size(good_idx,1));
+bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
+caiman_data.idx_components = all_good_idx;
+caiman_data.idx_components_bad = bad_idx;
+temp = sum(smat, 1);
+caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
+temp = sum(smat_weighted, 1);
+caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
+
+tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
+if ~isempty(params.reuse_contour_crop)
+%     tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
+    load(tempCropName, 'valid_contour_bounds');
+    if exist('valid_contour_bounds', 'var')
+        draw_bounds = false;
+        nsegs = size(caiman_data.C,1);
+        good_flag = true(nsegs,1);
+        for j = 1:nsegs
+            a = (reshape(caiman_data.A(:,j), [caiman_data.dims]))>0;
+            [yy, xx] = ind2sub(size(a), find(a));
+            isgood = inpolygon(xx, yy, valid_contour_bounds.x, valid_contour_bounds.y);
+            prop_in_poly = sum(isgood)/length(isgood);
+            if prop_in_poly < .5
+                good_flag(j) = false;
+            end
+        end
+        bad_inds = find(~good_flag);
+        allbad = unique([caiman_data.idx_components_bad, bad_inds']);
+
+    else
+        draw_bounds = true;
+    end
+else
+    draw_bounds = true;
+end
+if draw_bounds
+    [~, bad_inds, ~, valid_contour_bounds] = Draw_contour_bounding(caiman_data.fullA, ...
+        caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, false);
+    save(tempCropName, 'valid_contour_bounds', '-append')
+    allbad = unique([caiman_data.idx_components_bad, bad_inds']);
+end
 fprintf('\nRemoving %d bad components\n', length(allbad))
 neuron = remove_segments(caiman_data, allbad, false);
 
+% S2 = S2(ms.neuron.idx_components,:);
+
+
 % neuron = caiman_data;
 ms.neuron = neuron;
-ms.contour_bounds = bounds;
-spks = normalize_rows(ms.neuron.S);
+ms.valid_contour_bounds = valid_contour_bounds;
+spks = normalize_rows(ms.neuron.S_matw);
 % temp_ts = cat(1, ms.timestamps, ms.timestamps(end))./1000;
 % dt = abs(diff(temp_ts));
-[partition_ID, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params);
+[~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params);
 
 % ms.is_moving    = speed_epochs;
 ms.speed_epochs    = speed_epochs;
@@ -39,8 +84,8 @@ ms.head_ori = [];
 %     s = spks(i,:)*scale;
 %     plot(s + i - 1, 'r')
 % end
-[a] = place_cell_stats(spks, ms.arena.pfields, ms.arena.spkmap, ms.arena.vmap);
-[r] = place_cell_stats(spks, ms.room.pfields,  ms.room.spkmap,  ms.room.vmap);
+[ms.arena.pcell_stats] = place_cell_stats(spks, ms.arena.pfields, ms.arena.spkmap, ms.arena.vmap);
+[ms.room.pcell_stats] = place_cell_stats(spks, ms.room.pfields,  ms.room.spkmap,  ms.room.vmap);
 
 %% seting up optimal density subplot
 

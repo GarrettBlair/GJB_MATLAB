@@ -44,7 +44,7 @@ im(:,:,1) = background*.9 + bc;
 im(:,:,2) = background*.9 + mc;
 im(:,:,3) = background*.9;
 %
-h = figure; clf; 
+h = figure(375); clf; 
 set(gcf, 'Position', [224 183 1332 769])
 subplot_tight(1,2,1)
 image(im);
