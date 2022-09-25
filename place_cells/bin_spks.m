@@ -10,10 +10,14 @@ if sliding_method == true
     end
 else
     %%%% Compute summation with fixed bins, no sliding
-    nsub = floor(nsamples/window_size)-1;
-    tvec = 1:window_size:nsamples;
-    sumspks = NaN(nsegs, nsub);
+    nsub = floor(nsamples/window_size)+1;
+    tvec = [1:window_size:nsamples, nsamples];
     % first calc the number of spikes within the time resolution window time_res
+    if tvec(end)-tvec(end-1) < window_size/2
+%         warning('Last bin too small to include, skipping')
+        nsub = nsub-1;
+    end
+    sumspks = NaN(nsegs, nsub);
     for i = 1:nsub
         sumspks(:, i) = sum(spks(:, tvec(i):tvec(i+1)), 2);
     end

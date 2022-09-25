@@ -1,4 +1,4 @@
-function [ms, behav, params] = APA_generate_data_struct(AnimalDir, sessionNum, params)
+function [ms, behav, params] = APA_behav_from_dat(recording_dir, params)
 %% Read in the extracted position from APA_extract_pos_batch.ipynb
 % recording_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_aquisition\Hipp16942\2022_06_10\18_44_02';
 % recording_dir = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_18/16_59_59';
@@ -6,17 +6,12 @@ global params_sub
 params_sub = params;
 
 % fname_position = sprintf('%sexperiment/behav_position_data.csv', recording_dir);
-recording_dir   = AnimalDir.SessionDir{sessionNum};
-
-% fname_position = sprintf('%sexperiment/behav_position_data.csv', recording_dir);
-% fname_params = sprintf('%sexperiment/behav_ext_params.json', recording_dir);
-room_tracking_fname   = AnimalDir.tracking_room{sessionNum};
-arena_tracking_fname  = AnimalDir.tracking_arena{sessionNum};
+fname_position = sprintf('%sexperiment/behav_position_data.csv', recording_dir);
+fname_params = sprintf('%sexperiment/behav_ext_params.json', recording_dir);
 caimanFilename = sprintf('%sMiniLFOV/caiman_cnmfe_out.mat', recording_dir);
 msTSFile = sprintf('%sMiniLFOV/timeStamps.csv', recording_dir);
 msCropFile = sprintf('%sMiniLFOV/Crop_params.mat', recording_dir);
 msOriFile = sprintf('%sMiniLFOV/headOrientation.csv', recording_dir);
-
 % Read in the coresponding files
 
 crop_params = load(msCropFile);
@@ -35,13 +30,8 @@ else
     ms.ori = [];
 end
 % Get the position data if extracted
-if exist(room_tracking_fname, 'file')==2
-    [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname);
-    behav.room = room;
-    behav.arena = arena;
-% elseif exist(fname_position, 'file')==2
-%     [ms, behav, behav_params] = behavior_python_CSV_file(ms, fname_position, fname_params);
-%     params_sub.behav_params = behav_params;
+if exist(fname_position, 'file')==2
+    [ms, behav, behav_params] = make_behav_data(ms, fname_position, fname_params);
 else
     warning('No extracted behavior data:\n\t %s', fname_position);
     behav = [];
@@ -49,6 +39,7 @@ else
 end
 
 ms.caimanFilename = caimanFilename;
+params_sub.behav_params = behav_params;
 params = params_sub;
 
 end
@@ -64,12 +55,6 @@ ms.parentDir = recording_dir;
 ms.spatialDownsample = params_sub.crop_params.spatialDownSample;
 ms.temporalDownsample = params_sub.crop_params.temporalDownSample;
 ms.fileName = params_sub.crop_params.tiffStackout;
-if ~isfile(ms.fileName)&& isfile([ms.parentDir 'MiniLFOV/msCam.tiff'])
-    % I prob changed the directory name since cropping
-    f = [ms.parentDir 'MiniLFOV/msCam.tiff'];
-    params_sub.crop_params.tiffStackout = f;
-    ms.fileName = params_sub.crop_params.tiffStackout;
-end
 ms.fileName(strfind(ms.fileName, '/')) = '\';
 [ms.height, ms.width] = size(imread(string(ms.fileName),1));
 ms.frameNum = TS_data.FrameNumber(1:ms.temporalDownsample:end);
@@ -106,7 +91,7 @@ if frameMismatch | any(matches_bad)
 end
 end
 %%
-function [ms, behav, behav_params] = behavior_python_CSV_file(ms, room_tracking_fname, arena_tracking_fname, fname_params)
+function [ms, behav, behav_params] = make_behav_data(ms, fname_position, fname_params)
 global params_sub
 
 [behav, behav_params] = read_APA_csv(fname_position, fname_params);
@@ -219,71 +204,6 @@ is_moving = ms.arena.speed_smooth>params_sub.min_spd_thresh;
 
 [~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params_sub);
 
-ms.speed_epochs = speed_epochs;
-ms.is_moving = is_moving;
-
-
-if params_sub.plotting
-    figure(3); clf;
-    subplot(2,2,1)
-    hold on;
-    scatter3(behav.arena_x, behav.arena_y, ts, 1, 'k.')
-    scatter3(behav.x, behav.y, ts, 1, 'b.')
-    title('Extracted')
-    set(gca, 'View', [-60 60])
-    axis square
-    
-    subplot(2,2,2)
-    hold on;
-    plot3(ax, ay, ts, 'k-')
-    plot3(x, y, ts, 'b-')
-    title('Interp & Scaled')
-    set(gca, 'View', [-60 60])
-    axis square
-    
-    subplot(2,2,3)
-    hold on;
-    plot3(x, y, ts, 'b-')
-    plot3(xx, yy, ts, 'r-')
-    title('Room (b) vs. Arena (r)')
-    set(gca, 'View', [-60 60])
-    axis square
-    
-    subplot(4,2,6)
-    % hold on;
-    plot(ts, behav.spd_roomframe, 'b-')
-    title('Room speed (b)')
-    axis tight
-    subplot(4,2,8)
-    plot(ts, behav.spd_arenaframe, 'r-')
-    title('Arena speed (r)')
-    % set(gca, 'View', [-60 60])
-    axis tight
-end
-end
-%%
-function [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname)
-global params_sub
-ksize = round(params_sub.behav_fps*params_sub.behav_smoothing_interval);
-kern = ones(ksize, 1); kern = kern./sum(kern(:));
-
-[room, arena, params_sub] = behavior_DAT_tracking_eval(room_tracking_fname, arena_tracking_fname, params_sub);
-%%
-ms.room.x = interp1(room.timestamps, room.x, ms.timestamps, 'linear', 'extrap');
-ms.room.y = interp1(room.timestamps, room.y, ms.timestamps, 'linear', 'extrap');
-ms.arena.x = interp1(arena.timestamps, arena.x, ms.timestamps, 'linear', 'extrap');
-ms.arena.y = interp1(arena.timestamps, arena.y, ms.timestamps, 'linear', 'extrap');
-ms.room.speed   = interp1(room.timestamps, room.speed, ms.timestamps, 'linear', 'extrap');
-ms.arena.speed  = interp1(arena.timestamps, arena.speed, ms.timestamps, 'linear', 'extrap');
-
-% % dt = ms.dt_corrected;
-% % ms.room.speed  = sqrt(diff([ms.room.x(1); ms.room.x]).^2   + diff([ms.room.y(1); ms.room.y]).^2)./dt;
-% % ms.arena.speed = sqrt(diff([ms.arena.x(1); ms.arena.x]).^2 + diff([ms.arena.y(1); ms.arena.y]).^2)./dt;
-ms.room.speed_smooth  = conv(ms.room.speed,  kern, 'same');
-ms.arena.speed_smooth = conv(ms.arena.speed, kern, 'same');
-is_moving = ms.arena.speed_smooth>params_sub.min_spd_thresh;
-
-[~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params_sub);
 ms.speed_epochs = speed_epochs;
 ms.is_moving = is_moving;
 

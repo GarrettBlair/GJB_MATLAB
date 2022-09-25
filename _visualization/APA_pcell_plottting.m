@@ -3,7 +3,7 @@ nc = 5; nr = 4;
 
 [nsegs, nframes] = size(ms.neuron.C);
 
-contours = gbContours(ms.neuron.A, ms.neuron.dims, [], .6);
+contours = gbContours(ms.neuron.fullA, ms.neuron.dims, [], .6);
 craw = normalize_rows(ms.neuron.C+ms.neuron.YrA);
 % spks = squeeze(sum(ms.neuron.S_matw,1));
 spks = normalize_rows(ms.neuron.S_matw);
@@ -21,7 +21,8 @@ end
 end
 cspks = normalize_rows(cspks);
 
-spd = ms.speed_epochs';
+% spd = ms.speed_epochs';
+spd = ms.arena.speed'>5;
 figure(1)
 set(gcf, 'Position', [558         137        1133         782]); clf;
 r = [1  .4  .4];
@@ -74,47 +75,54 @@ for i = 1:nsegs
     %   ROOM VMAP   %
     subplot_tight(nr, nc, 2);
     imagesc(ms.room.vmap, 'AlphaData', ms.room.pfield_alpha)
+    set(gca, 'YDir','normal')
     axis image off
     %   ROOM POS AND SPIKES   %
-    
     subplot_tight(nr, nc, 3); hold on
-    plot(ms.room.x, ms.room.y*-1, 'Color', r)
-    scatter(ms.room.x(stlspk), ms.room.y(stlspk)*-1, stl_size, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
-    scatter(ms.room.x(spdspk), ms.room.y(spdspk)*-1, spd_size, 'MarkerFaceColor', r/2, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .85)
-    axis square
+    plot(ms.room.x, ms.room.y, 'Color', r)
+    scatter(ms.room.x(stlspk), ms.room.y(stlspk), stl_size, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
+    scatter(ms.room.x(spdspk), ms.room.y(spdspk), spd_size, 'MarkerFaceColor', r/2, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .85)
+    axis([-45 45 -45 45])
     %   ROOM PMAP   %
     subplot_tight(nr, nc, 4);
     imagesc(room_map, 'AlphaData', ms.room.pfield_alpha)
+    set(gca, 'YDir','normal')
     axis image off
     %   ROOM PMAP SMOOTH   %
     subplot_tight(nr, nc, 5);
     imagesc(room_map_s, 'AlphaData', ms.room.pfield_alpha)
+    set(gca, 'YDir','normal')
     axis image off
     %   CONTOUR   %
     subplot_tight(nr, nc, 1+nc) 
     imagesc(pnr)
+    rectangle('Position', [ry-win, rx-win, win*2+1, win*2+1], 'EdgeColor', 'r')
 %     image(cim2_sub)
 %     colorbar
     axis image off
     %   ARENA VMAP   %
     subplot_tight(nr, nc, 2+nc); hold on
     imagesc(ms.arena.vmap, 'AlphaData', ms.arena.pfield_alpha)
+    set(gca, 'YDir','normal')
+    axis([-45 45 -45 45])
     axis image off
     %   ARENA POS AND SPIKES  %
     subplot_tight(nr, nc, 3+nc); hold on
-    plot(ms.arena.x, ms.arena.y*-1, 'Color', b)
-%     scatter(ms.arena.x(s), ms.arena.y(s)*-1, s_size, 'MarkerFaceColor', b/3, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
-    scatter(ms.arena.x(stlspk), ms.arena.y(stlspk)*-1, stl_size, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
-    scatter(ms.arena.x(spdspk), ms.arena.y(spdspk)*-1, spd_size, 'MarkerFaceColor', b/2, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .85)
-    axis square
+    plot(ms.arena.x, ms.arena.y, 'Color', b)
+%     scatter(ms.arena.x(s), ms.arena.y(s), s_size, 'MarkerFaceColor', b/3, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
+    scatter(ms.arena.x(stlspk), ms.arena.y(stlspk), stl_size, 'MarkerFaceColor', [.4 .4 .4], 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .75)
+    scatter(ms.arena.x(spdspk), ms.arena.y(spdspk), spd_size, 'MarkerFaceColor', b/2, 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', .85)
+    axis([-45 45 -45 45])
     %   ARENA PMAP  %
     subplot_tight(nr, nc, 4+nc);
     imagesc(arena_map, 'AlphaData', ms.arena.pfield_alpha)
+    set(gca, 'YDir','normal')
     axis image off
     
     %   ARENA PMAP SMOOTH   %
     subplot_tight(nr, nc, 5+nc);
     imagesc(arena_map_s, 'AlphaData', ms.arena.pfield_alpha)
+    set(gca, 'YDir','normal')
     axis image off
     
     %   SPEED EPOCHS   %
@@ -138,5 +146,5 @@ for i = 1:nsegs
     axis tight off
     colorbar
     text(1.1*nframes, 2.5, 'speed (clipped)', 'Rotation', 270)
-%     input('')
+    input('')
 end

@@ -80,7 +80,7 @@ scaling_corrections = ones(numsess, 1);
 % max_ne = cell(1, numsess);
 % max_ne_neg = cell(1, numsess);
 %%
-fprintf('BG image - Session: ');
+fprintf('\nBG image - Session: ');
 fields2use = {'minFrame', 'meanFrame', 'corr_im', 'pnr_im'};
 fieldsOut = {'min_frame', 'max_raw', 'max_ne', 'max_ne_neg'};
 bg_size = [1 1]; %imresize(aligned_data_struct.overlapping_FOV, 1.5);
@@ -95,6 +95,10 @@ for i = 1:numsess
     
     for ii = 1:4
         eval(sprintf(' im = temp.ms.neuron.%s;', fields2use{ii}));
+        if var(im(:))<=1 && any(ii == [1 2])% low variance, prob blank/zeros
+            im = temp.ms.neuron.meanFrame;
+            warning('\nLow variance for field %s, using mean instead\n', fields2use{ii})
+        end
         imn = im - quantile(im(:), .01);
         imn = imn./quantile(imn(:), .999);
         eval(sprintf('%s{1,i} = imn;', fieldsOut{ii}));
@@ -129,25 +133,33 @@ for i = 1:numsess
         a = temp.ms.neuron.A;
     end
     aa = normalize_cols(a);
-    aa(aa<.5) = 0;
+    aa(aa<.6) = 0;
     nsegs = size(a,2);
 %     all_conts = zeros(nsegs, temp.ms.neuron.dims(1), temp.ms.neuron.dims(2));
 %     thresh_conts = zeros(nsegs, temp.ms.neuron.dims(1), temp.ms.neuron.dims(2));
-    all_conts = zeros(nsegs, bg_size(1), bg_size(2));
-    thresh_conts = false(nsegs, bg_size(1), bg_size(2));
+    all_conts = zeros(bg_size(1), bg_size(2), nsegs);
+%     thresh_conts = zeros(nsegs, bg_size(1), bg_size(2));
+    thresh_conts = zeros(bg_size(1), bg_size(2), nsegs);
     
     targ_diffs = size(bg) - double(temp.ms.neuron.dims);%size(targ_contour_projection);
     targ_inds = [1+floor(targ_diffs(1)/2), 1+floor(targ_diffs(2)/2)];
     h = temp.ms.neuron.dims(1);
     w = temp.ms.neuron.dims(2);
-    for seg = 1:nsegs
-%         aa = a(:,seg);
-%         aa = a(:,seg);
-%         at = aa;
-%         at(at<=max(at)*.7)= 0;
-        all_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(a(:,seg), [h, w]);
-        thresh_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(aa(:,seg)>0, [h, w]);
-    end
+
+    all_conts(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1), :) = reshape(a, [h, w, nsegs]);
+    all_conts = permute(all_conts, [3 1 2]);
+    thresh_conts(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1), :) = reshape(aa, [h, w, nsegs]);
+    thresh_conts = uint8(normalize_matrix(thresh_conts)*255);
+    thresh_conts = permute(thresh_conts, [3 1 2]);
+%     for seg = 1:nsegs
+% %         aa = a(:,seg);
+% %         aa = a(:,seg);
+% %         at = aa;
+% %         at(at<=max(at)*.7)= 0;
+%         all_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(a(:,seg), [h, w]);
+% %         thresh_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(aa(:,seg)>0, [h, w]);
+%         thresh_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(aa(:,seg), [h, w]);
+%     end
     bg1 = bg;
     bg1(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = max_raw{1,i};
     max_raw{1,i} = bg1;
@@ -161,7 +173,7 @@ for i = 1:numsess
     max_ne_neg{1,i} = bg1;
     
     spatial_footprints{i} = all_conts;
-    footprints_projections{i} = squeeze(sum(thresh_conts,1)>0);
+    footprints_projections{i} = squeeze(sum(thresh_conts,1));%>0;
 end
 fprintf(' Done! \n');
 
@@ -264,7 +276,7 @@ for i = 1:numsess
                 find(any(sum(im,3),2), 1)-20, find(any(sum(im,3),2), 1, 'last')+20];
             figure(cm_fig); clf
             subplot_tight(1,2,1); cla
-            image(im)
+            image(im./300)
             if click_shift == false && ~isnan(xx(1))
                 hold on
                 scatter(xx(1), yy(1), 50, 'ro')
@@ -422,7 +434,7 @@ for i = 1:numsess
     stemp = circshift(contour_bg, [down_right_corrections(i,:), 0]);
     stemp = shiftdim(stemp, 2); % make it cells x height x width
     
-    cproj = squeeze(sum(stemp, 1)>0);
+    cproj = squeeze(sum(stemp, 1));%>0);
     h1 = find(any(cproj,2), 1, 'first');
     h2 = find(any(cproj,2), 1, 'last');
     w1 = find(any(cproj,1), 1, 'first');

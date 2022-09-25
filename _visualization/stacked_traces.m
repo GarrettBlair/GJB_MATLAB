@@ -16,6 +16,6 @@ end
 
 hold on
 for i = 1:nsegs
-    plot(i-1+traces(i,:)*scale_t, line_props{:})
+    plot(i+traces(i,:)*scale_t, line_props{:})
 end
 hold off

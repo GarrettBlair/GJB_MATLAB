@@ -1,4 +1,4 @@
-function [popcorr, popcorr_prob, cellcorr, cellcorr_prob, pop_sumspks, cell_sumspks] = Fenton_pco(spks, pop_window_size, cell_window_size, sliding_method)
+function [popcorr, popcorr_prob, pop_sumspks] = Fenton_pcop_stability(spks, pop_window_size, sliding_method)
 %% Compute the binned activity correlation within spike matrix
 % INPUTS:
 % 'spks' - cell by time activity matrix (M x N)
@@ -18,11 +18,11 @@ popcorr_prob = NaN(nsamples);
 popcorr((eye(nsamples)==1)) = NaN;
 popcorr_prob((eye(nsamples)==1)) = NaN;
 
-% next calc the correlation between cells i and j
-[cell_sumspks] = bin_spks(spks, cell_window_size, sliding_method);
-cellcorr = NaN(ncells);
-cellcorr_prob = NaN(ncells);
-[cellcorr,  cellcorr_prob] = corr(cell_sumspks', 'type', 'Kendall');
-cellcorr((eye(ncells)==1)) = NaN;
-cellcorr_prob((eye(ncells)==1)) = NaN;
+% % next calc the correlation between cells i and j
+% [cell_sumspks] = bin_spks(spks, cell_window_size, sliding_method);
+% cellcorr = NaN(ncells);
+% cellcorr_prob = NaN(ncells);
+% [cellcorr,  cellcorr_prob] = corr(cell_sumspks', 'type', 'Kendall');
+% cellcorr((eye(ncells)==1)) = NaN;
+% cellcorr_prob((eye(ncells)==1)) = NaN;
 end

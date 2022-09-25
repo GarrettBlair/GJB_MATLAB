@@ -10,17 +10,24 @@ caiman_data = load(caimanFilename);
 [nsegs,nframes] = size(caiman_data.C);
 
 [smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
-all_good_idx = find(sum(good_idx,1)==size(good_idx,1));
-bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
-caiman_data.idx_components = all_good_idx;
-caiman_data.idx_components_bad = bad_idx;
+if params.remove_bad_caiman_segs
+    % all_good_idx = find(sum(good_idx,1)==size(good_idx,1));
+    all_good_idx = find(sum(good_idx,1)>0);
+    bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
+    caiman_data.idx_components = all_good_idx;
+    caiman_data.idx_components_bad = bad_idx;
+else
+    caiman_data.idx_components = 1:size(caiman_data.C,1);
+    caiman_data.idx_components_bad = [];
+end
+
 temp = sum(smat, 1);
 caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
 temp = sum(smat_weighted, 1);
 caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
 
-tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
 if ~isempty(params.reuse_contour_crop)
+    tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
 %     tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
     load(tempCropName, 'valid_contour_bounds');
     if exist('valid_contour_bounds', 'var')
@@ -43,12 +50,13 @@ if ~isempty(params.reuse_contour_crop)
         draw_bounds = true;
     end
 else
+    tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, 'bounding_box.mat');
     draw_bounds = true;
 end
 if draw_bounds
     [~, bad_inds, ~, valid_contour_bounds] = Draw_contour_bounding(caiman_data.fullA, ...
         caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, false);
-    save(tempCropName, 'valid_contour_bounds', '-append')
+    save(tempCropName, 'valid_contour_bounds')
     allbad = unique([caiman_data.idx_components_bad, bad_inds']);
 end
 fprintf('\nRemoving %d bad components\n', length(allbad))

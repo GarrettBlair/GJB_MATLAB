@@ -1,0 +1,23 @@
+~~~~~~~~~~~~~~~~~~~~~~~~
+TO DO
+~~~~~~~~~~~~~~~~~~~~~~~~
+- add behav variables : total path length, 1st/2nd half in water sess,inter-entrance times
+- when comparing data, use the recording date to match day rather than be hard coded
+- Manifold capacity analysis for Blair linear data and fenton APA data
+- do a PEH for shocks on speed / direction of movement to show that shock is felt, compared to random samples
+- normalize #entrances by total meters
+~~~~~~~~~~~~~~~~~~~~~~~~
+TO BUY
+~~~~~~~~~~~~~~~~~~~~~~~~
+- M2 memory for origin comp
+- GRIN lenses
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+OTHER
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Current MATTLAB open scripts 9/16/22
+C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\Experiments\APA\APA_analysis_batch.m
+C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\APA_behav_eval.m
+C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\APA_WTR_matching_cells_comptest.m
+C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\setup_imaging_Sessionfiles.m

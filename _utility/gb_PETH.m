@@ -1,4 +1,4 @@
-function [peth_mean, peth_std, peth_pre, num_events, peth_p, peth_diff] = gb_PETH(sig, event, pre, post)
+function [peth_mean, peth_std, peth_pre, num_events, peth_p, peth_diff, P] = gb_PETH(sig, event, pre, post)
 
 if islogical(sig)
 %     bin_e = 1:8:length(sig);

@@ -44,12 +44,13 @@ for animalLoop = 1:numAnimals
     AnimalDir = setup_imaging_Sessionfiles(animal_name, dir_file, processedDir, contourDir);
     %
     fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
-    tic
+    tic    
     for sessionLoop = 1:AnimalDir.numSess
         processedFile = AnimalDir.processedFile{sessionLoop};
         if isempty(dir(processedFile)) == true || resave_proccessed==true
             fprintf('~~~CAIMAN Extraction beginning: %s...', AnimalDir.Sessname{sessionLoop})
             recording_dir   = AnimalDir.SessionDir{sessionLoop};
+            if AnimalDir.ispath(sessionLoop) == 1
             %
             [ms, behav, params] = APA_generate_data_struct(recording_dir, params);
             %
@@ -77,6 +78,9 @@ for animalLoop = 1:numAnimals
             clearvars ms neuron caiman_data
             %
             fprintf(' Done!\n\t\t%s\n', processedFile)
+            else
+               warning('\n Could not find specified session path\n')
+            end
         else
             fprintf('~~~CAIMAN Extraction skipped: %s\n', AnimalDir.Sessname{sessionLoop})
         end

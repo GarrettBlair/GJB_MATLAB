@@ -19,12 +19,14 @@ smoothing_kern = gausswin(ksize*2+1);
 smoothing_kern = smoothing_kern*smoothing_kern';
 smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
 
+vmap(vmap<occupancy_thresh) = NaN;
+
 for i = 1:nsegs
     %%
     % generate the spk map
     [smap, ~] = make_occupancymap_2D(x,  y,  spks(i, :), bins, bins);
     % threshold based on occupancy
-    smap(vmap<occupancy_thresh) = NaN;
+%     smap(vmap<occupancy_thresh) = NaN;
     spkmap(i,:,:) = smap;
     % divide by time spent for weighted place field
     pfields(i,:,:) = smap./vmap;
@@ -34,16 +36,21 @@ for i = 1:nsegs
     % remove the unvisited areas
     sm_smap(isnan(vmap)) = NaN;
     pfields_smooth(i,:,:) = sm_smap./vmap;
+%     pfields_smooth(i,:,:) = conv2(smap./vmap, smoothing_kern, 'same');
     if false % for plotting and checking
         figure(99); clf
         subplot(2,2,1)
         imagesc(vmap);
+        title('vmap')
         subplot(2,2,2)
         imagesc(smap);
+        title('smap')
         subplot(2,2,3)
         imagesc(sm_smap);
+        title('smooth smap')
         subplot(2,2,4)
         imagesc(sm_smap./vmap);
+        title('smooth pfield')
         drawnow
     end
 end
