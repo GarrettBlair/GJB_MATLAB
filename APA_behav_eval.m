@@ -34,6 +34,7 @@ max_sess = 0;
 isHAB = cell(nsub, 1);
 isWTR = cell(nsub, 1);
 isDRK = cell(nsub, 1);
+sessLabel_indiv = cell(nsub, 1);
 for i = 1:nsub
     %%
     dir_file            = sprintf('%s%s/%s%s', experiment_folder, animals{i}, animals{i}, dir_list_fname);
@@ -90,6 +91,7 @@ for i = 1:nsub
         path_length(i,j) = pathlength; % path length in meters
         entrances(i,j) = room.num_entrances + arena.num_entrances;
         numShocks(i,j) = room.num_shocks + arena.num_shocks;
+        sessLabel_indiv{i,j} = AnimalDir{i}.SessType{j};
     end
     if ~skip_date_create
         matching_day   = matching_day(1:dayInd, :);
@@ -137,14 +139,16 @@ drk_sess = unique(drk_sess);
 
 nsess = length(allsess_plotting);
 acolor = scramble_mat(jet(nsub*3)/1.2, 1);
-sessLabel = cell(nsess,1);
-for i = 1:nsess
-    if allsess_plotting(i) == 1
-        sessLabel{i} = 'HAB';
-    else
-        sessLabel{i} = sprintf('TR%d', allsess_plotting(i)-2);
-   end
-end
+sessLabel = sessLabel_indiv(1,:);
+% sessLabel = cell(nsess,1);
+% for i = 1:nsess
+%     isHAB{i}
+%     if allsess_plotting(i) == 1
+%         sessLabel{i} = 'HAB';
+%     else
+%         sessLabel{i} = sprintf('TR%d', allsess_plotting(i)-2);
+%    end
+% end
 figure(44); clf; 
 % vars = {'path_length', 'entrances_pm', 'shocks_pm'};
 vars = {'entrances', 'numShocks', 'path_length'};
@@ -161,7 +165,7 @@ title('Total Entrances')
 ind = [-5, -5];
 plot(ind, [Inf, Inf], 'k')
 plot(ind, [Inf, Inf], 'k:')
-lgd_line = legend({'Same Session', 'Next Session'});
+lgd_line = legend({'Same Day', 'Separate'});
 
 
 %

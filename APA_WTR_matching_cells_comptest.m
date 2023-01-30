@@ -6,18 +6,18 @@ cell_sec_res = 3;
 pall = cell(2,1);
 
 rng('default')
-for aLoop = 1:2
+for aLoop = 1:length(all_animal_name)%:2
 animal_name = all_animal_name{aLoop};%animals{animalLoop};
 experiment_folder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\';
 dir_list_fname = '_directory_list.csv';
 
 dir_file            = sprintf('%s%s/%s%s', experiment_folder, animal_name, animal_name, dir_list_fname);
-processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
+% processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
 contourDir          = sprintf('%s%s/matching_contours/', experiment_folder, animal_name);
-matchingfname = sprintf('%smatching_matrix.mat', contourDir);
+matchingfname       = sprintf('%smatching_matrix.mat', contourDir);
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
-AnimalDir = setup_imaging_Sessionfiles(animal_name, dir_file, DAT_Dir, processedDir, contourDir);
+AnimalDir = setup_imaging_Sessionfiles(animal_name, dir_file, experiment_folder);%, DAT_Dir, processedDir, contourDir);
 nsess = AnimalDir.numSess;
 load(matchingfname);
 
@@ -30,20 +30,32 @@ light_colors = colors + (1-colors)/3;
 numcells2use = [];
 sess_corr = NaN(nsess);
 pall{aLoop} = NaN(nsess,30);
-for s1 = 2:nsess
-    for s2 = s1:nsess
+for s1 = 1:nsess
+    for s2 = s1+1:nsess
+        %%
         if s1~=s2
+            %%
             fname1 = AnimalDir.processedFile{s1};
+            cname1 = AnimalDir.contourFile{s1};
             fname2 = AnimalDir.processedFile{s2};
             
             f1 = load(fname1);
+            c1 = load(cname1);
             f2 = load(fname2);
+            im = zeros(size(c1.contours,2), size(c1.contours,3), 3);
+            for i = 1:size(c1.contours,1)
+                r = squeeze(c1.contours(i,:,:)).*rand(1);
+                g = squeeze(c1.contours(i,:,:)).*rand(1);
+                b = squeeze(c1.contours(i,:,:)).*rand(1);
+                
+                im = im + cat(3, r,g,b);
+            end
             
-%           matched = sum(cellmap>0,2)==size(cellmap,2); %
             matched = cellmap(:,s1)>0 & cellmap(:,s2)>0;
-%             sum(matched)
-            spks1 = f1.ms.neuron.S_matw(cellmap(matched,s1), :);
-            spks2 = f2.ms.neuron.S_matw(cellmap(matched,s2), :);
+            cells_s1 = cellmap(matched,s1);
+            cells_s2 = cellmap(matched,s2);
+            spks1 = f1.ms.neuron.S_matw(cells_s1, :);
+            spks2 = f2.ms.neuron.S_matw(cells_s2, :);
             
             spks1 = normalize_rows(spks1);
             spks2 = normalize_rows(spks2);
@@ -61,16 +73,38 @@ for s1 = 2:nsess
             pcell_dt1 = round(1/median(f1.ms.dt))*cell_sec_res;
             pcell_dt2 = round(1/median(f2.ms.dt))*cell_sec_res;
             
-            [popcorr1, ~, ~] = Fenton_pop_stability(spks1, pop_sec_res, f1.ms.timestamps./1000, false);
-            [popcorr2, ~, ~] = Fenton_pop_stability(spks2, pop_sec_res, f2.ms.timestamps./1000, false);
+            [timecorr1, ~, ~] = Fenton_pop_stability(spks1, pop_sec_res, f1.ms.timestamps(1:nsamples)./1000, false);
+            [timecorr2, ~, ~] = Fenton_pop_stability(spks2, pop_sec_res, f2.ms.timestamps(1:nsamples)./1000, false);
             %             [popcorr3, ~, cellcorr3, ~, ~, ~] = Fenton_pop_stability(cat(2, spks1, spks2), pop_dt1, false);
             
-            [cellcorr1, ~, ~] = Fenton_cell_corr(spks1, pcell_dt1, false);
-            [cellcorr2, ~, ~] = Fenton_cell_corr(spks2, pcell_dt2, false);
+            [cellcorr1, ~, ~] = Fenton_cell_corr(spks1, cell_sec_res, f1.ms.timestamps(1:nsamples)./1000, false);
+            [cellcorr2, ~, ~] = Fenton_cell_corr(spks2, cell_sec_res, f2.ms.timestamps(1:nsamples)./1000, false);
+            
             c1 = triu(cellcorr1,1);
             c2 = triu(cellcorr2,1);
             lowerinds = c1==0 & c2==0;
             sess_corr(s1,s2) = corr(c1(~lowerinds), c2(~lowerinds));
+            
+            %% place fields
+            p1 = f1.ms.room.pfields_smooth(cells_s1, :, :);
+            p2 = f2.ms.room.pfields_smooth(cells_s2, :, :);
+            room_betweencorr = NaN(sum(matched), 1);
+            for ploop = 1:sum(matched)
+                p1sub = squeeze(p1(ploop,:,:));
+                p2sub = squeeze(p2(ploop,:,:));
+                valid_inds = ~isnan(p1sub.*p2sub);
+                room_betweencorr(ploop) = corr(p1sub(valid_inds), p2sub(valid_inds));
+            end
+            p1 = f1.ms.arena.pfields_smooth(cells_s1, :, :);
+            p2 = f2.ms.arena.pfields_smooth(cells_s2, :, :);
+            arena_betweencorr = NaN(sum(matched), 1);
+            for ploop = 1:sum(matched)
+                p1sub = squeeze(p1(ploop,:,:));
+                p2sub = squeeze(p2(ploop,:,:));
+                valid_inds = ~isnan(p1sub.*p2sub);
+                arena_betweencorr(ploop) = corr(p1sub(valid_inds), p2sub(valid_inds));
+            end
+            
         else
             fname1 = AnimalDir.processedFile{s1};
             f1 = load(fname1);
@@ -157,177 +191,193 @@ ylabel('PCO (corr)')
 
 
 %%
-% fdir = 'C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\datfiles\V4Min\';
-% afname = sprintf('%s%s', 'GRAU_V4Miniscope_TestMouse2_CaImaging_Pretraining_Arena.dat');
-% rfname = sprintf('%s%s', 'GRAU_V4Miniscope_TestMouse2_CaImaging_Pretraining_Room.dat');
-clear
-behav = [];
-fdir = 'C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\datfiles\V4Min\';
-% afname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_Pretraining_Arena.dat');
-% rfname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_Pretraining_Room.dat');
-% behav.msFileName = "C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\TestMouse1\processed_files\2022_07_05___17_09_41_ms_placecells_data.mat";
-% afname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_TR2-1_Arena.dat');
-% rfname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_TR2-1_Room.dat');
-% behav.msFileName = "C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\TestMouse1\processed_files\2022_07_13___15_12_07_ms_placecells_data.mat";
-afname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_TR2-RET_Arena.dat');
-rfname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse1_CaImaging_TR2-RET_Room.dat');
-behav.msFileName = "C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\TestMouse1\processed_files\2022_07_18___09_27_18_ms_placecells_data.mat";
+matchingfile = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\matching_contours\matching_matrix.mat';
+ddir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\';
+filenames = ...
+   {'2022_09_16_H17_03_07_TR9';...
+    '2022_09_16_H17_41_09_WTR10';...
+    '2022_09_16_H18_19_23_TR11'};
+% filenames = ...
+%    {'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_14_H17_07_45_TR7_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_14_H17_52_22_WTR8_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_16_H17_03_07_TR9_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_16_H17_41_09_WTR10_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_16_H18_19_23_TR11_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_24_H16_11_01_WTR19_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_24_H16_46_19_TR20_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_27_H17_23_57_WTR21_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_27_H17_58_42_TR22_@placecells.mat';...
+%     'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\2022_09_27_H18_26_28_TR23_@placecells.mat'};
+pop_sec_res = 30;
+cell_sec_res = 5;
+spd_thresh = 5; %cm/sec
+numRand = 10;
+figdir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\processed_files\temp_output\';
+temp = load(matchingfile);
+% cellmap = temp.cellmap;
+cellmap = temp.cellmap(:,3:5);
+nsess = size(cellmap,2);
+sess_corr = NaN(nsess);
+sess_absdiff = NaN(nsess);
+time_corr_mean = NaN(nsess,1);
+time_corr_std = NaN(nsess,1);
 
-% afname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse2_CaImaging_RET_Arena.dat');
-% rfname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse2_CaImaging_RET_Room.dat');
-% behav.msFileName = "C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\TestMouse2\processed_files\2022_07_18___08_51_01_ms_placecells_data.mat";
-% afname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse2_CaImaging_TR1_Arena.dat');
-% rfname = sprintf('%s%s', fdir, 'GRAU_V4Miniscope_TestMouse2_CaImaging_TR1_Room.dat');
-% behav.msFileName = "C:\Users\gjb326\Desktop\RecordingData\AlejandroGrau\TestMouse2\processed_files\2022_07_12___11_15_53_ms_placecells_data.mat";
-
-behav.roomFname = rfname;
-behav.arenaFname = afname;
-%%
-[arena, arena_params] = read_APA_csv(afname, []);
-[room , room_params] = read_APA_csv(rfname, []);
-
-behav.timestamps = arena.timestamps;
-behav_params.arena_radius = 20;
-% % % [xx,yy] = ginput(3);
-% % % [R,xcyc] = fit_circle_through_3_points([xx yy])
-behav_params.center = [130 130];
-behav_params.radius = 112;
-behav_params.behav_fps = round(1/median(abs(diff(behav.timestamps./1000))));
-behav_params.behav_smoothing_interval = .5;
-behav_params.num_partitions           = 2;
-behav_params.max_spd_thresh           = 50;
-behav_params.min_spd_thresh           = 2;
-behav_params.min_samples              = 10;
-
-% ARENA FRAME
-nanind = arena.rawx==0 & arena.rawy == 0;
-x = arena.rawx;
-y = arena.rawy;
-x(nanind) = NaN;
-y(nanind) = NaN;
-t = arena.timestamps;
-if length(unique(t)) ~= length(t)
-    ind = find(diff(t)==0)+1;
-    t(ind) = t(ind)+1;
+num_shared = [cellmap'>0] * [cellmap>0];
+min_shared = min(num_shared(:));
+numcells2use = [];%
+if isempty(numcells2use)
+    numRand = 1;
 end
-ts = t./1000; % convert from ms to seconds
-nanind = (isnan(x) & isnan(y));
-xn = interp1(ts(~nanind), x(~nanind), ts(nanind), 'linear');
-yn = interp1(ts(~nanind), y(~nanind), ts(nanind), 'linear');
-x(nanind) = xn; y(nanind) = yn;
+figure(95); 
+clf
+room_pfieldcorr  = cell(nsess);
+arena_pfieldcorr = cell(nsess);
+for s1 = 1:nsess
+    for s2 = s1:nsess
+        %%
+        fname1 = sprintf('%sprocessed_files\\%s_@placecells.mat', ddir, filenames{s1});
+        cname1 = sprintf('%smatching_contours\\%s_contours.mat', ddir, filenames{s1});
+        temp = load(fname1, 'ms');
+        ms1 = temp.ms;
+        temp = load(cname1, 'contours');
+        conts1 = temp.contours;
+        
+        if s1==s2
+%             single_sess_anaylsis
+            spks1 = ms1.neuron.S_matw;
+            spks1 = normalize_rows(spks1);
+            [timecorr1, ~, ~] = Fenton_pop_stability(spks1, pop_sec_res, ms1.timestamps./1000, false);
+            time_corr_mean(s1) = nanmean(timecorr1(:));
+            time_corr_std(s1) = nanstd(timecorr1(:))*2;
+        else
+%             cross_sess_anaylsis
+        fname2 = sprintf('%sprocessed_files\\%s_@placecells.mat', ddir, filenames{s2});
+        cname2 = sprintf('%smatching_contours\\%s_contours.mat', ddir, filenames{s2});
+        temp = load(fname2, 'ms');
+        ms2 = temp.ms;
+        temp = load(cname2, 'contours');
+        conts2 = temp.contours;
+        
+        
+        matched = cellmap(:,s1)>0 & cellmap(:,s2)>0;
+        matched = sum(cellmap>0,2)==nsess; % use cell matched across all sessions
+        cells_s1 = cellmap(matched,s1);
+        cells_s2 = cellmap(matched,s2);
+        conts1 = conts1(cells_s1,:,:);
+        conts2 = conts2(cells_s2,:,:);
+        spks1 = ms1.neuron.S_matw(cells_s1, :);
+        spks2 = ms2.neuron.S_matw(cells_s2, :);
+        
+        pfields1_room = ms1.room.pfields_smooth(cells_s1, :, :);
+        pfields2_room = ms2.room.pfields_smooth(cells_s2, :, :);
+        pfields1_arena = ms1.arena.pfields_smooth(cells_s1, :, :);
+        pfields2_arena = ms2.arena.pfields_smooth(cells_s2, :, :);
+        %%
+        for pfieldLoop = 1:sum(matched)
+            %%
+%             room_alpha  = ms1.room.pfield_alpha.*ms2.room.pfield_alpha;
+%             arena_alpha = ms1.arena.pfield_alpha.*ms2.arena.pfield_alpha;
+            p1 = squeeze(pfields1_room(pfieldLoop,:,:));
+            p2 = squeeze(pfields2_room(pfieldLoop,:,:));
+            validinds = ~isnan(p1.*p2);
+            cc = corr(p1(validinds), p2(validinds));
+            figure([s1*100+s2]); clf;
+            subplot(2,2,1)
+            imagesc(p1, 'AlphaData', ms1.room.pfield_alpha); axis image off
+            title(sprintf('Sess%d Room, %1.3f', s1, cc))
+            subplot(2,2,2)
+            imagesc(p2, 'AlphaData', ms2.room.pfield_alpha); axis image off
+            title(sprintf('Sess%d Room, %1.3f', s2, cc))
+            room_pfieldcorr{s1, s2} = cat(1, room_pfieldcorr{s1, s2}, cc);
 
-x = behav_params.arena_radius*(x-behav_params.center(1))./behav_params.radius;
-y = behav_params.arena_radius*(y-behav_params.center(2))./behav_params.radius;
-ksize = round(behav_params.behav_fps*behav_params.behav_smoothing_interval);
-kern = ones(ksize, 1); kern = kern./sum(kern(:));
-arena.x = conv(x, kern, 'same');
-arena.y = conv(y, kern, 'same');
+            p1 = squeeze(pfields1_arena(pfieldLoop,:,:));
+            p2 = squeeze(pfields2_arena(pfieldLoop,:,:));
+            validinds = ~isnan(p1.*p2);
+            cc = corr(p1(validinds), p2(validinds));
+            subplot(2,2,3)
+            imagesc(p1, 'AlphaData', ms1.arena.pfield_alpha); axis image off
+            title(sprintf('Sess%d Arena, %1.3f', s1, cc))
+            subplot(2,2,4)
+            imagesc(p2, 'AlphaData', ms2.arena.pfield_alpha); axis image off
+            title(sprintf('Sess%d Arena, %1.3f', s2, cc))
+            arena_pfieldcorr{s1, s2} = cat(1, arena_pfieldcorr{s1, s2}, cc);
+            temp = getframe(gcf); 
+            imwrite(temp.cdata, sprintf('%s\\sess%d-sess%d_seg%d_Arena.png', figdir, s1, s2, pfieldLoop))
+        end
+        figure(95); 
+        subplot(nsess, nsess, sub2ind([nsess, nsess], s1, s2)); hold on
+        violinplot([room_pfieldcorr{s1,s2}, arena_pfieldcorr{s1,s2}])
 
-% ROOM FRAME
-nanind = room.rawx==0 & room.rawy == 0;
-x = room.rawx;
-y = room.rawy;
-x(nanind) = NaN;
-y(nanind) = NaN;
-t = room.timestamps;
-if length(unique(t)) ~= length(t)
-    ind = find(diff(t)==0)+1;
-    t(ind) = t(ind)+1;
+        spks1 = normalize_rows(spks1);
+        spks2 = normalize_rows(spks2);
+        nsamples = min(size(spks1,2), size(spks2,2)); % minimum samles
+        spks1 = spks1(:, 1:nsamples);
+        spks2 = spks2(:, 1:nsamples);
+        
+        pop_dt1 = round(1/median(ms1.dt))*pop_sec_res;
+        pop_dt2 = round(1/median(ms2.dt))*pop_sec_res;
+        pcell_dt1 = round(1/median(ms1.dt))*cell_sec_res;
+        pcell_dt2 = round(1/median(ms2.dt))*cell_sec_res;
+        
+        spd1 = ms1.arena.speed_smooth;
+        spd2 = ms2.arena.speed_smooth;
+        c = NaN(numRand,1);
+        d = NaN(numRand,1);
+        for randloop = 1:numRand
+            if ~isempty(numcells2use)
+                [~, randord] = sort(rand(sum(matched), 1));
+                spks1_sub = spks1(randord(1:numcells2use), :);
+                spks2_sub = spks2(randord(1:numcells2use), :);
+            elseif numcells2use<0 % negavtive for random
+                [~, randord] = sort(rand(sum(matched), 1));
+                spks1_sub = spks1(randord(1:numcells2use), :);
+                [~, randord] = sort(rand(sum(matched), 1));
+                spks2_sub = spks2(randord(1:numcells2use), :);
+            else
+                spks1_sub = spks1;
+                spks2_sub = spks2;
+            end
+            spks1_sub(:,spd1<=spd_thresh) = 0;
+            spks2_sub(:,spd2<=spd_thresh) = 0;
+            spks1_sub = spks1_sub>0;
+            spks2_sub = spks2_sub>0;
+%             [timecorr1, ~, ~] = Fenton_pop_stability(spks1_sub, pop_sec_res, ms1.timestamps(1:nsamples)./1000, false);
+%             [timecorr2, ~, ~] = Fenton_pop_stability(spks2_sub, pop_sec_res, ms2.timestamps(1:nsamples)./1000, false);
+            %         joint_t = ms1.timestamps(1:nsamples)./1000;
+            %         joint_t = [joint_t; joint_t(end) + cell_sec_res + ms2.timestamps(1:nsamples)./1000];
+            %         [timecorr3, ~, ~] = Fenton_pop_stability([spks1, spks2], pop_sec_res, joint_t, false);
+            %             [popcorr3, ~, cellcorr3, ~, ~, ~] = Fenton_pop_stability(cat(2, spks1, spks2), pop_dt1, false);
+            
+            [cellcorr1, ~, ~] = Fenton_cell_corr(spks1_sub, cell_sec_res, ms1.timestamps(1:nsamples)./1000, false);
+            [cellcorr2, ~, ~] = Fenton_cell_corr(spks2_sub, cell_sec_res, ms2.timestamps(1:nsamples)./1000, false);
+            
+            c1 = triu(cellcorr1,1);
+            c2 = triu(cellcorr2,1);
+            lowerinds = c1==0 & c2==0;
+            corrs1 = c1(~lowerinds);
+            corrs2 = c2(~lowerinds);
+            [corrs1_sort, ord] = sort(corrs1, 'descend');
+            corrs2_sort = corrs2(ord);
+            tops = floor(length(ord)/4);
+            corrs2_sort = corrs2_sort(1:tops);
+            corrs1_sort = corrs1_sort(1:tops);
+            
+            pw_diff = corrs1_sort - corrs2_sort;
+            c(randloop) =  corr(corrs1_sort, corrs2_sort);
+            d(randloop) =  median((pw_diff));
+        end
+        sess_corr(s1,s2) = nanmean(c);
+        sess_corr(s2,s1) = sess_corr(s1,s2);
+        
+        sess_absdiff(s1,s2) = nanmean(d);
+        sess_absdiff(s2,s1) = sess_absdiff(s1,s2);
+        end
+    end
 end
-ts = t./1000; % convert from ms to seconds
-nanind = (isnan(x) & isnan(y));
-xn = interp1(ts(~nanind), x(~nanind), ts(nanind), 'linear');
-yn = interp1(ts(~nanind), y(~nanind), ts(nanind), 'linear');
-x(nanind) = xn; y(nanind) = yn;
-
-x = behav_params.arena_radius*(x-behav_params.center(1))./behav_params.radius;
-y = behav_params.arena_radius*(y-behav_params.center(2))./behav_params.radius;
-ksize = round(behav_params.behav_fps*behav_params.behav_smoothing_interval);
-kern = ones(ksize, 1); kern = kern./sum(kern(:));
-room.x = conv(x, kern, 'same');
-room.y = conv(y, kern, 'same');
-
-%
-behav_dt = [median(diff(behav.timestamps)); diff([behav.timestamps])]/1000;
-behav.dt = behav_dt;
-room.speed  =  sqrt(diff([room.x(1); room.x]).^2   + diff([room.y(1); room.y]).^2)./behav_dt;
-arena.speed =  sqrt(diff([arena.x(1); arena.x]).^2 + diff([arena.y(1); arena.y]).^2)./behav_dt;
-
-behav.room = room; behav.arena = arena;
-
-
-temp = load(behav.msFileName);
-ms = temp.ms;
-params = temp.params;
-
-ms.room.x = interp1(behav.timestamps,  behav.room.x,  ms.timestamps, 'linear');
-ms.room.y = interp1(behav.timestamps,  behav.room.y,  ms.timestamps, 'linear');
-ms.arena.x = interp1(behav.timestamps, behav.arena.x, ms.timestamps, 'linear');
-ms.arena.y = interp1(behav.timestamps, behav.arena.y, ms.timestamps, 'linear');
-
-dt = ms.dt_corrected;
-ms.room.speed = sqrt(diff([ms.room.x(1); ms.room.x]).^2 + diff([ms.room.y(1); ms.room.y]).^2)./dt;
-ms.arena.speed = sqrt(diff([ms.arena.x(1); ms.arena.x]).^2 + diff([ms.arena.y(1); ms.arena.y]).^2)./dt;
-ms.room.speed_smooth = conv(ms.room.speed,   kern, 'same');
-ms.arena.speed_smooth = conv(ms.arena.speed, kern, 'same');
-% is_moving = ms.arena.speed_smooth>params_sub.min_spd_thresh;
-
-[~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, behav_params);
-
-ms.speed_epochs = speed_epochs;
-is_moving = speed_epochs;
-
-%
-params.pos_bins = [-20:2:20];
-params.occupancy_thresh = .00; % in seconds
-N = params.pfield_kernel_radius*2+1; alpha = 2.5; % default
-params.pfield_gauss_std = ((N-1)/(2*alpha))*abs(params.pos_bins(1)-params.pos_bins(2));
-
-spks = normalize_rows(ms.neuron.S_matw);
-[ms.room]   = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
-[ms.arena]  = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
-%
-[ms.arena.pcell_stats] = place_cell_stats(spks, ms.arena.pfields, ms.arena.spkmap, ms.arena.vmap);
-[ms.room.pcell_stats] = place_cell_stats(spks, ms.room.pfields,  ms.room.spkmap,  ms.room.vmap);
-
-ms.arena.pfield_alpha = ~isnan(ms.arena.vmap);
-ms.room.pfield_alpha = ~isnan(ms.room.vmap);
-%%
-rng(100);
-nsegs = size(spks,1);
-segs = 1:nsegs; 
-ds = 30;
-[~, ord] = sort(rand(1,nsegs));
-segs2use = segs(ord(1:ds));
-% [~, spord] = sort(ms.arena.pcell_stats.spkRate, 'descend');
-% segs2use = segs(spord(1:ds));
-
-% as = ms.arena.pcell_stats.infoPerSpike(segs2use);
-infspk = ms.arena.pcell_stats.infoPerSpike(segs2use);
-% spkr = ms.arena.pcell_stats.spkRate(segs2use(1:ds));
-as = infspk;
-[~, arena_info_ord] = sort(as, 'descend');
-p_a = ms.arena.pfields_smooth(segs2use,:,:);
-p_a = p_a(arena_info_ord,:,:);
-
-s_sub = spks(segs2use,:);
-s_sub = s_sub(arena_info_ord,:);
-% c_sub = ms.neuron.C(segs2use,:);
-c_sub = ms.neuron.C(segs2use,:) + ms.neuron.YrA(segs2use,:);
-c_sub = c_sub(arena_info_ord,:);
-c_sub = normalize_rows(c_sub);
-p_r = ms.room.pfields_smooth(segs2use,:,:);
-p_r = p_r(arena_info_ord,:,:);
-% ss = get(0,'screensize');
-%     ar = mean([1, ss(3)/ss(4)])-1;
-%     n = ceil(sqrt(nsegs/ds));
-    nc = 2; % round(n*(1-ar))+1;
-    nr = ds; % round(n*(1+ar));
-    
-    smoothing_kern = gausswin(7);
-% smoothing_kern = gausswin(ksize+1);
-smoothing_kern = smoothing_kern*smoothing_kern';
-smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
+figure(92); clf; subplot(121); imagesc(sess_corr, [0 1]); subplot(122); imagesc(sess_absdiff);
+figure; subplot(131); imagesc(timecorr1, [-.2 .6]); subplot(132); imagesc(timecorr2, [-.2 .6]); subplot(133); imagesc(timecorr3, [-.2 .6]);
+figure(94); clf; subplot(131); imagesc(cellcorr1, [-.3 .3]); subplot(132); imagesc(cellcorr2, [-.3 .3]); subplot(133); imagesc(cellcorr1-cellcorr2, [-.3 .3]);
+% figure; hold on; plot(corrs1_sort); plot(corrs2_sort)
 
 %%
     figure(10); clf;

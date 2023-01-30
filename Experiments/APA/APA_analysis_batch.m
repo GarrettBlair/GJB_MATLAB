@@ -8,32 +8,35 @@ params.pixpercm                 = 3.1220; % pixel radius of behav cam env
 params.behav_fps                = 30;
 params.behav_smoothing_interval = .25; % in seconds, length of smoothing kernel
 
-params.pos_bins                 = -40:4:40; % in cm, x and y
+params.pos_bins                 = [-45, -36:4:36, 45]; % in cm, x and y
 params.yaw_bin                  = -pi:pi/8:pi;
 params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
 params.pfield_kernel_radius     = 3; % kernel ends up being [n*2 + 1] in bins
 params.smin_vals                = -50:5:-10; % smin values used to create the 'deconv_sweep.mat'
 % params.speed_thresh             = 5; % speed thresh in cm/sec
 params.num_partitions           = 2;
+% params.max_spd_thresh           = 100;
+% params.min_spd_thresh           = 5;
 params.max_spd_thresh           = 100;
-params.min_spd_thresh           = 5;
+params.min_spd_thresh           = 0;
 params.min_samples              = 10;
-
+params.ipos_int_time             = .25;%.2; % seconds, binning time for computing momentary spatial information
 
 % params.rotate_behav             = true;
 params.nan_interp               = true;
-params.remove_bad_caiman_segs   = true;
+params.remove_bad_caiman_segs   = false;
 params.correct_dt               = true; % correct for large jumps in timestamp file when constructing vmap
 params.plotting                 = false;
+params.skip_contour_bounding    = true;
 params.reuse_contour_crop       = [];%'Crop_params.mat'; % use the previous ms file contour crop, unless empty
-
 
 
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 
 %
 % animals = {'Hipp16942'};
-animals = {'Hipp18240'};
+% animals = {'Hipp18240'};
+animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
 analysis_version = 'v1.0';
 dir_list_fname = '_directory_list.csv';
@@ -41,56 +44,62 @@ dir_list_fname = '_directory_list.csv';
 experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
-rerun_behav         = true;
-rerun_place         = true;
-resave_proccessed   = true;
-resave_contours     = true;
+rerun_behav         = false;
+rerun_place         = false;
+resave_proccessed   = false;
+resave_contours     = false;
 fit_contours_fullFOV= false;
 
-sess2plot=8;
-wtr = 8;
-plot_hab = false;
+PRINT_ONLY = false;
+
+% sess2plot=8;
+% wtr = 8;
+% plot_hab = false;
 %%
 % APA_behav_eval(experiment_folder, animals, sess2plot, wtr, plot_hab, params);
-% APA_behav_eval(experiment_folder, [], params);
+% APA_behav_eval(experiment_folder, animals, params);
 for animalLoop = 1:numAnimals
     %%
     animal_name = animals{animalLoop};
     dir_file            = sprintf('%s%s/%s%s', experiment_folder, animal_name, animal_name, dir_list_fname);
-%     processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
-%     contourDir          = sprintf('%s%s/matching_contours/', experiment_folder, animal_name);
-    
     AnimalDir = setup_imaging_Sessionfiles(animal_name, dir_file, experiment_folder);%DAT_Dir, processedDir, contourDir);
     %
     fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
     tic
     
-%     AnimalDir.numSess = 1
+    % read in behavior data from tracker
     for sessionLoop = 1:AnimalDir.numSess
         behaviorFile        = AnimalDir.behaviorFile{sessionLoop};
         if isempty(dir(behaviorFile)) == true || rerun_behav==true
             fprintf('~~~BEHAV analysis beginning: %s...', AnimalDir.Sessname{sessionLoop})
             %
+            if PRINT_ONLY==false
             [ms, behav, params_sub] = APA_generate_data_struct(AnimalDir, sessionLoop, params);
             ms.params = params_sub;
             save(behaviorFile, 'ms', 'behav', 'analysis_version', 'AnimalDir');
-            
+            end
             fprintf(' Done!\n\t\t%s\n', behaviorFile)
         else
             fprintf('~~~BEHAV analysis skipped: %s\n', AnimalDir.Sessname{sessionLoop})
         end
     end
     toc 
+    %
     tic
+    % read in caiman data and construct rate maps
     for sessionLoop = 1:AnimalDir.numSess
         placecellFile       = AnimalDir.placecellFile{sessionLoop};
         if isempty(dir(placecellFile)) == true || rerun_place==true
             fprintf('~~~PCELL analysis beginning: %s...', AnimalDir.Sessname{sessionLoop})
             behaviorFile        = AnimalDir.behaviorFile{sessionLoop};
+            if PRINT_ONLY==false
             %
             load(behaviorFile, 'ms');
             [ms]            = APA_generate_placemaps(ms, params);
+            [ms.room.momentary_pos_info, rtemp]   = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
+            [ms.arena.momentary_pos_info, atemp] = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
             save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir');
+            end
             %
             fprintf(' Done!\n\t\t%s\n', placecellFile)
         else
@@ -98,27 +107,52 @@ for animalLoop = 1:numAnimals
         end
     end
     toc
+    % resave processed files to single directory
     for sessionLoop = 1:AnimalDir.numSess
         processedFile   = AnimalDir.processedFile{sessionLoop};
         if isempty(dir(processedFile)) == true || resave_proccessed==true
             fprintf('~~~PROCESSED file creation: %s...', AnimalDir.Sessname{sessionLoop})
             placecellFile       = AnimalDir.placecellFile{sessionLoop};
             %
+            if PRINT_ONLY==false
             load(placecellFile, 'ms');
             save(processedFile, 'ms', 'params', 'analysis_version', 'AnimalDir');
+            end
             %
             fprintf(' Done!\n\t\t%s\n', processedFile)
         else
             fprintf('~~~PROCESSED file creation skipped: %s\n', AnimalDir.Sessname{sessionLoop})
         end
+        spikeFile       = AnimalDir.spikeFile{sessionLoop};
+        if isempty(dir(spikeFile)) == true || resave_proccessed==true
+            fprintf('~~~SPIKES file creation: %s...', AnimalDir.Sessname{sessionLoop})
+            %
+            if PRINT_ONLY==false
+            load(processedFile, 'ms');
+            spks = ms.neuron.S_matw;
+            time = ms.timestamps;
+            room_x = ms.room.x;
+            room_y = ms.room.y;
+            arena_x = ms.arena.x;
+            arena_y = ms.arena.y;
+            parentDir = ms.parentDir;
+            save(spikeFile, 'spks', 'time', 'room_x', 'room_y', 'arena_x', 'arena_y', 'parentDir')
+            end
+            %             spks = ms.neuron.S_mat;
+            %
+            fprintf(' Done!\n\t\t%s\n', processedFile)
+        else
+            fprintf('~~~SPIKE file creation skipped: %s\n', AnimalDir.Sessname{sessionLoop})
+        end
     end
-    if false
+    % saving contour files
     for sessionLoop = 1:AnimalDir.numSess
         contourFile = AnimalDir.contourFile{sessionLoop};
         processedFile = AnimalDir.processedFile{sessionLoop};
-        valid_resave = isempty(dir(contourFile)) == true || resave_contours==true;
-        if  valid_resave && exist(processedFile, 'file')==2
+        valid_resave = isfile(contourFile) == false || resave_contours==true;
+        if  valid_resave && isfile(processedFile)
             fprintf('~~~RESAVE CONTOURS beginning: %s...', AnimalDir.Sessname{sessionLoop})
+            if PRINT_ONLY==false
             load(processedFile, 'ms');
             contours = gbContours(ms.neuron.fullA, ms.neuron.dims, [], .6);
             % Can load in meta data to refit contours into the camera frame
@@ -134,6 +168,7 @@ for animalLoop = 1:numAnimals
             save(contourFile, 'contours');
             clearvars ms
             %
+            end
             fprintf(' Done!\n\t\t%s\n', processedFile)
         elseif valid_resave && ~exist(processedFile, 'file')==2
             fprintf('~~~RESAVE CONTOURS skipped: processed data not found!%s\n', AnimalDir.Sessname{sessionLoop})
@@ -141,11 +176,16 @@ for animalLoop = 1:numAnimals
             fprintf('~~~RESAVE CONTOURS skipped: %s\n', AnimalDir.Sessname{sessionLoop})
         end
     end
-    end
     if false
         APA_LFOV_matching;
-        cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\manual_cellreg\';
-        matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\matching_matrix.mat';
+        cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc19947\matching_contours\manual_alignment\Acc19947\cellreg\';
+        matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc19947\matching_contours\manual_alignment\matching_matrix.mat';
+        cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc20832\matching_contours\manual_alignment\Acc20832\cellreg\';
+        matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc20832\matching_contours\manual_alignment\matching_matrix.mat';
+%         cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\cell_reg\';
+%         matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\matching_matrix.mat';
+%         cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\matching_contours\cellreg\';
+%         matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\matching_contours\matching_matrix.mat';
         Setup_matching_marix(cellreg_dir, matching_fileName);
     end
     toc

@@ -1,7 +1,7 @@
 %% This script allows performing analysis on hippocampal data. 
 
 % Here, define the path to the SampleData folder on your computer:
-PathRawData='C:\Users\gjb326\Documents\MATLAB\_dim_reduction\Ziv_island_LaplacianEigs\SampleData';
+PathRawData='C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\_dim_reduction\Ziv_island_LaplacianEigs\SampleData';
 %%
 ActivityThreshold=1;
 downsample_flag=2;
@@ -35,7 +35,8 @@ TimeVec=TimeVec(legitimacy_vec);
 
 %% Dimentionality Reduction
 rand('seed',0)
-ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames,p_neighbors_vec);
+% ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames,p_neighbors_vec);
+ReducedDataArray=DimentionalityReduction_Ver1(craw,p_neighbors_vec);
 
 v2=ReducedDataArray{3};
 

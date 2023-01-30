@@ -1,4 +1,4 @@
-function [vmap_time, vmap_counts] = make_occupancymap_2D(pos_x, pos_y, signal, bins_x, bins_y)
+function [vmap_time, vmap_counts, xbin, ybin] = make_occupancymap_2D(pos_x, pos_y, signal, bins_x, bins_y)
 %%
 %%%% INPUT:
 % pos_x, pos_y   = x,y values of position samples, should be speed filtered already

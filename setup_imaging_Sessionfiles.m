@@ -4,12 +4,17 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
     DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
     animal_DAT_str   = sprintf('%s%s_', DAT_Dir, animal_name);
     pcellString = '@placecells.mat';
+    spikeFileString = '@spikes.mat';
     contourString = 'contours.mat';
     processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
-    contourDir          = sprintf('%s%s/matching_contours/', experiment_folder, animal_name);
     if isempty(dir(processedDir)) == true
         mkdir(processedDir)
     end
+    spikeFileDir        = sprintf('%s%s/processed_files/spikeFiles/', experiment_folder, animal_name);
+    if isempty(dir(spikeFileDir)) == true
+        mkdir(spikeFileDir)
+    end
+    contourDir          = sprintf('%s%s/matching_contours/', experiment_folder, animal_name);
     if isempty(dir(contourDir)) == true
         mkdir(contourDir)
     end
@@ -32,6 +37,7 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
         end            
         Sessname        = strcat(Sessname(1:s1-1), '_H', Sessname(s1+1:end));
         alt_pcellName   = strcat(Sessname, '_', pcellString);
+        spikeFileName   = strcat(Sessname, '_', spikeFileString);
         contourFileName = strcat(Sessname, '_', contourString);
         % setup the filenames, full path
         tracking_room    = sprintf('%s%s_Room.dat', animal_DAT_str, SessType);
@@ -39,6 +45,7 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
         behavior_saveFile    = sprintf('%sexperiment/%s_@behavior.mat', recording_dir, Sessname);
         placecellFile   = sprintf('%sexperiment/%s', recording_dir, alt_pcellName);
         processedFile   = sprintf('%s%s', processedDir,  alt_pcellName);
+        spikeFile       = sprintf('%s%s', spikeFileDir,  spikeFileName);
         contourFile     = sprintf('%s%s', contourDir,  contourFileName);
         % pass the filenames to the data structure
         out_struct.Sessname{sessionLoop, 1}             = Sessname;
@@ -48,6 +55,7 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
         out_struct.behaviorFile{sessionLoop, 1}         = behavior_saveFile;
         out_struct.placecellFile{sessionLoop, 1}        = placecellFile;
         out_struct.processedFile{sessionLoop, 1}        = processedFile;
+        out_struct.spikeFile{sessionLoop, 1}            = spikeFile;
         out_struct.contourFile{sessionLoop, 1}          = contourFile;
         if isfolder(recording_dir)==1
             out_struct.ispath(sessionLoop, 1)           = true;

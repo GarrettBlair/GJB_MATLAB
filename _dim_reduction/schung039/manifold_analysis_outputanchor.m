@@ -229,7 +229,8 @@ function [v_f, vt_f , exitflag, alphar, normvt2] = minimize_vt_sq(t, sD1, kappa)
 %     options.qpmethod = 2; 
     %%
 %    [v_f, vt_f,exitflag, output, alpha0] = cplexqp(H,f,Aineq,bineq,[],[],[],[],[],options);
-    [v_f, vt_f,exitflag, output, alpha0] = quadprog(H,f,Aineq,bineq);
+    options = optimset('Display', 'off');
+    [v_f, vt_f,exitflag, output, alpha0] = quadprog(H,f,Aineq,bineq,[],[],[],[],[], options);
     normvt=(vt_f+0.5*sum(t.^2))*2;
     normvt2= sum((v_f-t).^2);
     alphar=alpha0.ineqlin; % Vector of lagrange coefficients for each data 

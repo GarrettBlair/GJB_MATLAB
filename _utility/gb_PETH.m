@@ -1,19 +1,23 @@
 function [peth_mean, peth_std, peth_pre, num_events, peth_p, peth_diff, P] = gb_PETH(sig, event, pre, post)
 
-if islogical(sig)
-%     bin_e = 1:8:length(sig);
-%     bin_width = mean(diff(bin_e))/2;
-%     bin_center = bin_e(1:end-1) + bin_width;
-%     
-%     ts = find(sig);
-%     [binLP, ~, ~] = histcounts(ts, bin_e);
-%     ts_hs = interp1(bin_center, 1*(binLP), 1:length(sig));
-%     ts_hs(isnan(ts_hs)) = 0;
-%     sig = ts_hs;
-else
-    sig = sig/max(sig);
-    
+if ~any(size(sig)==length(event))
+    error('At least one dim of signal and event must be the same size')
+    return
 end
+% if islogical(sig)
+% %     bin_e = 1:8:length(sig);
+% %     bin_width = mean(diff(bin_e))/2;
+% %     bin_center = bin_e(1:end-1) + bin_width;
+% %     
+% %     ts = find(sig);
+% %     [binLP, ~, ~] = histcounts(ts, bin_e);
+% %     ts_hs = interp1(bin_center, 1*(binLP), 1:length(sig));
+% %     ts_hs(isnan(ts_hs)) = 0;
+% %     sig = ts_hs;
+% else
+%     sig = sig/max(sig);
+%     
+% end
 
 if size(sig,1) > size(sig,2)
     sig = sig';

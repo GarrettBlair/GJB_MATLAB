@@ -19,6 +19,7 @@ data = activity_mat_active_frames';
 N = size(data,1);
 
 knn    = ceil(p_neighbors1*N); 
+% knn
 sigma2 = 25;
 
 m = size(data,1);
@@ -41,11 +42,15 @@ DO = max(DO,DO');
 
 % get eigenvectors
 [v,d] = eigs(DO,10,'la');
+% % fprintf('ISOMAP')
+% % options.dims = 1:3;
+% % options.verbose = false;
+% % [Y, R, E] = IsomapII(DO, 'k', knn, options); 
 
 data2 = [v(:,1:10)];
 N                = size(data2,1);
 knn    = ceil(p_neighbors2*N); % each patch will only look at its knn nearest neighbors in R^d
-
+% knn
 m                = size(data2,1);
 dt               = squareform(pdist(data2));
 [srtdDt,srtdIdx] = sort(dt,'ascend');

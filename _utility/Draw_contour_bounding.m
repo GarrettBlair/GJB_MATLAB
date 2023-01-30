@@ -84,6 +84,10 @@ if button~=113 % if not q get points
             pd = 1000;
             ind = ind+1;
             [opx(ind), opy(ind), button] = ginput(1);
+        elseif button==113 && length(opx)==1
+            opx = double([1    1       dims(2)     dims(2), 1]);
+            opy = double([1    dims(1) dims(1)     1,       1]);
+            plot(opx, opy, 'mo-', 'LineWidth', 3)
         end
         plot(opx(ind-1:ind), opy(ind-1:ind), 'mo-')
         pd = sqrt( (opx(1) - opx(ind)).^2 + (opy(1) - opy(ind)).^2 );

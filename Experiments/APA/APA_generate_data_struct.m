@@ -22,20 +22,20 @@ msOriFile = sprintf('%sMiniLFOV/headOrientation.csv', recording_dir);
 crop_params = load(msCropFile);
 params_sub.crop_params  = crop_params;
 % Generate the miniscope structure
-if exist(msTSFile, 'file')==2
+if isfile(msTSFile)
     [ms] = make_ms_struct(recording_dir, msTSFile);
 else
     error('No timestamp.csv file in directory:\n\t %s', recording_dir);
 end
 % Get the orientation data from BNO
-if exist(msOriFile, 'file')==2
+if isfile(msOriFile)
     [ms] = make_ori_struct(ms, msOriFile);
 else
     warning('No BNO data:\n\t %s', msOriFile);
     ms.ori = [];
 end
 % Get the position data if extracted
-if exist(room_tracking_fname, 'file')==2
+if isfile(room_tracking_fname) && isfile(arena_tracking_fname) 
     [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname);
     behav.room = room;
     behav.arena = arena;
@@ -43,7 +43,7 @@ if exist(room_tracking_fname, 'file')==2
 %     [ms, behav, behav_params] = behavior_python_CSV_file(ms, fname_position, fname_params);
 %     params_sub.behav_params = behav_params;
 else
-    warning('No extracted behavior data:\n\t %s', fname_position);
+    warning('No extracted behavior data:\n\t %s', room_tracking_fname);
     behav = [];
     behav_params = [];
 end
@@ -56,6 +56,9 @@ end
 function [ms] = make_ms_struct(recording_dir, msTSFile)
 global params_sub
 TS_data = readtable(msTSFile);
+if strcmp(TS_data.Properties.VariableNames{1}, 'Var1') % timestamps file was resaved after removing bad frames and col names were not saved
+    TS_data.Properties.VariableNames = {'FrameNumber', 'TimeStamp_ms_', 'Buffer'};
+end
 ms = [];
 
 recording_dir(strfind(recording_dir, '\')) = '/';
@@ -63,7 +66,8 @@ recording_dir(strfind(recording_dir, '\')) = '/';
 ms.parentDir = recording_dir;
 ms.spatialDownsample = params_sub.crop_params.spatialDownSample;
 ms.temporalDownsample = params_sub.crop_params.temporalDownSample;
-ms.fileName = params_sub.crop_params.tiffStackout;
+% ms.fileName = params_sub.crop_params.tiffStackout;
+ms.fileName = [ms.parentDir 'MiniLFOV/msCam_MC.tiff']; % params_sub.crop_params.tiffStackout;
 if ~isfile(ms.fileName)&& isfile([ms.parentDir 'MiniLFOV/msCam.tiff'])
     % I prob changed the directory name since cropping
     f = [ms.parentDir 'MiniLFOV/msCam.tiff'];
@@ -82,7 +86,7 @@ if params_sub.correct_dt
     % in the timestamp file
     bad_dt_thresh = mean(ms_dt)+10*std(ms_dt);
     bad_vals = ms_dt >= bad_dt_thresh;
-    if sum(bad_vals)/length(ms_dt)>.01
+    if (sum(bad_vals)/length(ms_dt))  >.01
        warning('Many bad values found in timestamp dt, should check! %d%% bad', ceil(100*sum(bad_vals)/length(ms_dt))) 
     end
     ms_dt(ms_dt >= bad_dt_thresh) = median(ms_dt);
@@ -269,12 +273,37 @@ kern = ones(ksize, 1); kern = kern./sum(kern(:));
 
 [room, arena, params_sub] = behavior_DAT_tracking_eval(room_tracking_fname, arena_tracking_fname, params_sub);
 %%
+if abs( ms.timestamps(end) - room.timestamps(end) )> 1000  || abs( ms.timestamps(end) - arena.timestamps(end) )> 1000
+    warning('!~!~! Large timestamp discrepancy found between ms and dat files!')
+    disp([ms.fileName])
+%     return
+    if ms.timestamps(end) > room.timestamps(end)
+        diff_ts = find(ms.timestamps > room.timestamps(end), 1)-1;
+        fprintf('~~~Tracker crashed before ms software ended, \n\ttimestamps cuttof at %d index\n', diff_ts);
+        ms.timestamps       = ms.timestamps(1:diff_ts);
+        ms.frameNum         = ms.frameNum(1:diff_ts);
+        ms.dt               = ms.dt(1:diff_ts);
+        ms.dt_corrected     = ms.dt_corrected(1:diff_ts);
+        ms.ori              = ms.ori(1:diff_ts, :);
+        ms.warnings.TrackerCrash = ...
+            sprintf('Tracker crashed before ms software ended, timestamps cuttof at %d index', diff_ts);
+    else
+        error('Uknown solution')
+    end
+end
+
 ms.room.x = interp1(room.timestamps, room.x, ms.timestamps, 'linear', 'extrap');
 ms.room.y = interp1(room.timestamps, room.y, ms.timestamps, 'linear', 'extrap');
 ms.arena.x = interp1(arena.timestamps, arena.x, ms.timestamps, 'linear', 'extrap');
 ms.arena.y = interp1(arena.timestamps, arena.y, ms.timestamps, 'linear', 'extrap');
 ms.room.speed   = interp1(room.timestamps, room.speed, ms.timestamps, 'linear', 'extrap');
 ms.arena.speed  = interp1(arena.timestamps, arena.speed, ms.timestamps, 'linear', 'extrap');
+
+% Extract the shock times, entrances, and approaches
+ms.room.entranceTimes = room.timestamps(room.entrance_start_idx);
+ms.room.shockTimes = room.timestamps(room.shock_start_idx);
+ms.arena.entranceTimes = arena.timestamps(arena.entrance_start_idx);
+ms.arena.shockTimes = arena.timestamps(arena.shock_start_idx);
 
 % % dt = ms.dt_corrected;
 % % ms.room.speed  = sqrt(diff([ms.room.x(1); ms.room.x]).^2   + diff([ms.room.y(1); ms.room.y]).^2)./dt;
@@ -335,7 +364,15 @@ ORI_Data = readtable(msOriFile);
 shared_ts = ismember(ORI_Data.TimeStamp_ms_, ms.timestamps);
 
 ori_ts = ORI_Data.TimeStamp_ms_(shared_ts);
-q = [ORI_Data.qw, ORI_Data.qx, ORI_Data.qy, ORI_Data.qx];
+% w = ORI_Data.qw(shared_ts);
+% x = ORI_Data.qx(shared_ts);
+% y = ORI_Data.qy(shared_ts);
+% z = ORI_Data.qz(shared_ts);
+% [roll2, pitch2, yaw2] = quaternion_conversion_LFOV(w, x ,y, z);
+
+
+
+q = [ORI_Data.qw, ORI_Data.qx, ORI_Data.qy, ORI_Data.qz];
 q = q(shared_ts, :);
 [~, roll, pitch, yaw] = quatern2rotMat_Daniel(q);
 ms.ori = ORI_Data(shared_ts, :);

@@ -49,9 +49,13 @@ for strLoop = 1:length(strnames)
     % % %     y = movmedian(y, round(params.behav_fps/2));
         xn = conv(x, kern, 'same');
         yn = conv(y, kern, 'same');
-        tails = [1:floor(ksize/2)+1, length(x)-floor(ksize/2):length(x)];
-        xn(tails) = x(tails);
-        yn(tails) = y(tails);
+%         tails = [1:floor(ksize/2)+1, length(x)-floor(ksize/2)-1:length(x)];
+        xn(1:floor(ksize/2)+1) = xn(floor(ksize/2)+2);
+        xn(length(x)-floor(ksize/2):length(x)) = xn(length(x)-floor(ksize/2)-1);
+        yn(1:floor(ksize/2)+1) = yn(floor(ksize/2)+2);
+        yn(length(x)-floor(ksize/2):length(x)) = yn(length(x)-floor(ksize/2)-1);
+%         xn(tails) = x(tails);
+%         yn(tails) = y(tails);
         x = xn;
         y = yn*-1; % flip y axis to align with cpu view
         
@@ -66,7 +70,7 @@ for strLoop = 1:length(strnames)
         % in the timestamp file
         bad_dt_thresh = mean(behav_dt)+10*std(behav_dt);
         bad_vals = behav_dt >= bad_dt_thresh;
-        if sum(bad_vals)/length(behav_dt)>.01
+        if ( sum(bad_vals)/length(behav_dt) )>.01
            warning('Many bad values found in timestamp dt, should check!') 
         end
         behav_dt(bad_vals) = median(behav_dt);

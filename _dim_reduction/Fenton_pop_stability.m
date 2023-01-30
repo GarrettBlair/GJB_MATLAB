@@ -16,4 +16,14 @@ function [popcorr, popcorr_prob, pop_sumspks] = Fenton_pop_stability(spks, time_
 [popcorr,  popcorr_prob] = corr(pop_sumspks, 'type', 'Pearson');
 popcorr((eye(nsamples)==1)) = NaN;
 popcorr_prob((eye(nsamples)==1)) = NaN;
+if true
+figure; 
+subplot(211);
+stacked_traces(normalize_rows(pop_sumspks), .5); axis square
+colormap viridis
+% imagesc(pop_sumspks); axis square
+subplot(212);
+imagesc(popcorr, [-.3 1]); axis square
+drawnow
+end
 end

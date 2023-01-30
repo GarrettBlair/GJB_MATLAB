@@ -11,7 +11,7 @@ function [cellcorr, cellcorr_prob, cell_sumspks] = Fenton_cell_corr(spks, time_r
 
 % next calc the correlation between cells i and j
 % [cell_sumspks] = bin_spks(spks, cell_window_size, sliding_method);
-[cell_sumspks] = bin_spks(spks, time_res, time_vec, sliding_method);
+[cell_sumspks] = bin_spks_time(spks, time_res, time_vec, sliding_method);
 [cellcorr,  cellcorr_prob] = corr(cell_sumspks', 'type', 'Kendall');
 cellcorr((eye(ncells)==1)) = NaN;
 cellcorr_prob((eye(ncells)==1)) = NaN;

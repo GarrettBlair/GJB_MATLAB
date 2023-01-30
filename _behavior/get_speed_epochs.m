@@ -13,7 +13,7 @@ min_samples     = params.min_samples;
 
 %%
 good_speed = spd_vect >= min_spd_thresh; 
-
+if ~min(good_speed) == max(good_speed)
 spd_change_start = find([diff([0; good_speed])]);
 if spd_change_start > 1
 spd_change_end = spd_change_start - 1;
@@ -91,6 +91,9 @@ for i = 1:num_parts
     end
 end
 speed_epochs = partition_ID>0;
-
+else
+    partition_ID = zeros(length(spd_vect), 1);
+  	speed_epochs = good_speed;
+end
 
 end

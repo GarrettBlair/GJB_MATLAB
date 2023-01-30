@@ -9,23 +9,40 @@ caiman_data = load(caimanFilename);
 % caiman_data.idx_components = caiman_data.idx_components+1;
 [nsegs,nframes] = size(caiman_data.C);
 
+
+
 [smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
-if params.remove_bad_caiman_segs
-    % all_good_idx = find(sum(good_idx,1)==size(good_idx,1));
     all_good_idx = find(sum(good_idx,1)>0);
     bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
+    caiman_data.good_idx_smat = good_idx;
     caiman_data.idx_components = all_good_idx;
     caiman_data.idx_components_bad = bad_idx;
-else
-    caiman_data.idx_components = 1:size(caiman_data.C,1);
-    caiman_data.idx_components_bad = [];
-end
 
 temp = sum(smat, 1);
 caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
 temp = sum(smat_weighted, 1);
 caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
 
+if length(ms.timestamps) ~= nframes || length(ms.frameNum) ~= nframes
+    warning('!~!~! Frame number discrepancy found between ms and caiman files!')
+    disp([ms.fileName])
+    last_ts = length(ms.timestamps);
+    if last_ts < nframes && isfield(ms.warnings, 'TrackerCrash')
+        disp([ms.warnings.TrackerCrash])
+        fprintf('~~~Tracker crashed,\n\tconcatenating caiman_data at %d index\n', last_ts);
+        caiman_data.C               = caiman_data.C(:, 1:last_ts);
+        caiman_data.S               = caiman_data.S(:, 1:last_ts);
+        caiman_data.YrA             = caiman_data.YrA(:, 1:last_ts);
+        caiman_data.mc_xshifts      = caiman_data.mc_xshifts(1:last_ts,:);
+        caiman_data.mc_yshifts      = caiman_data.mc_yshifts(1:last_ts,:);
+        caiman_data.dataIso         = caiman_data.dataIso(1:last_ts, :);
+        caiman_data.S_mat           = caiman_data.S_mat(:, 1:last_ts);
+        caiman_data.S_matw          = caiman_data.S_matw(:, 1:last_ts);
+    else
+        error('Uknown solution')
+    end
+end
+%% Cropping contours manually if needed
 if ~isempty(params.reuse_contour_crop)
     tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
 %     tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
@@ -55,31 +72,77 @@ else
 end
 if draw_bounds
     [~, bad_inds, ~, valid_contour_bounds] = Draw_contour_bounding(caiman_data.fullA, ...
-        caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, false);
+        caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, params.skip_contour_bounding);
     save(tempCropName, 'valid_contour_bounds')
     allbad = unique([caiman_data.idx_components_bad, bad_inds']);
 end
-fprintf('\nRemoving %d bad components\n', length(allbad))
-neuron = remove_segments(caiman_data, allbad, false);
 
-% S2 = S2(ms.neuron.idx_components,:);
+if params.remove_bad_caiman_segs
+    fprintf('\nRemoving %d bad components\n', length(allbad))
+    neuron = remove_segments(caiman_data, allbad, false);
+else
+    neuron = caiman_data;
+end
 
-
-% neuron = caiman_data;
 ms.neuron = neuron;
 ms.valid_contour_bounds = valid_contour_bounds;
 spks = normalize_rows(ms.neuron.S_matw);
 % temp_ts = cat(1, ms.timestamps, ms.timestamps(end))./1000;
 % dt = abs(diff(temp_ts));
+if isfield(ms, 'arena')
 [~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params);
 
-% ms.is_moving    = speed_epochs;
-ms.speed_epochs    = speed_epochs;
+
+ms.speed_epochs = speed_epochs;
 is_moving       = speed_epochs;
-ms.head_ori = [];
-[ms.room]   = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
-[ms.arena]  = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
-[ms.head_ori]    = construct_place_maps_1D(ms.head_ori,   ms.ori.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), params.yaw_bin, params);
+ms.head_ori     = [];
+[ms.room]       = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
+[ms.arena]      = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
+[ms.head_ori]   = construct_place_maps_1D(ms.head_ori,   ms.ori.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), params.yaw_bin, params);
+
+% %%
+% shock_zone_center = pi/2; % typical room shock configuration
+% shock_zone_size = pi/6; % size in rad from center to edge
+% distance_entrance_size = pi/2; % distance (between 0 to pi) to look at approaches to categorize escape vs failure
+% 
+% x = ms.room.x; y = ms.room.y; t = ms.timestamps./1000;
+% [th, rth] = cart2pol(x,y);
+% % figure(1); clf; polarhistogram(th,24);
+% 
+% d = shock_zone_center - th;
+% d = abs(mod(d + pi, 2*pi) - pi);
+% 
+% 
+% % [temp]    = construct_place_maps_1D(ms.room,   th(is_moving), ms.dt(is_moving), spks(:, is_moving), [-pi:pi/6:pi], params);
+% [temp]    = construct_place_maps_1D(ms.room,   d(is_moving), ms.dt(is_moving), spks(:, is_moving), [0:pi/32:pi], params);
+% qqq = (normalize_rows(temp.pfields_smooth));
+% [~, mp] = max(qqq, [], 2);
+% [~, ord] = sort(mp);
+% qqq = qqq(ord,:);
+% 
+% s = ms.room.shockTimes;
+% shockVec = false(length(ms.timestamps),1);
+% e = ms.room.entranceTimes;
+% entrVec = false(length(ms.timestamps),1);
+% for i = 1:length(s)
+%     ind = find(min(abs(ms.timestamps - s(i))) == abs(ms.timestamps - s(i)));
+%     shockVec(ind) = true;
+% end
+% for i = 1:length(e)
+%     ind = find(min(abs(ms.timestamps - e(i))) == abs(ms.timestamps - e(i)));
+%     entrVec(ind) = true;
+% end
+% peth_mean = zeros(size(spks,1), 2*22*2 + 1);
+% for i = 1:size(spks,1)
+% [peth_mean(i,:)] = gb_PETH(spks(i,:), entrVec, 22*2, 22*2);
+% % [peth_mean(i,:)] = gb_PETH(spks(i,:), shockVec, 22*2, 22*2);
+% end
+% [~, mp] = max(peth_mean, [], 2);
+% [~, ord] = sort(mp);
+% peth_mean = peth_mean(ord,:);
+
+% theta spike maps and distance maps, also PETH of shocks
+%%
 %     imagesc(ms.ori.pfields_smooth)
 
 % figure(9); clf; hold on
@@ -132,6 +195,9 @@ if params.plotting
         axis square off
     end
 end
+else
+    warning('No position data within MS, skipped place maps!')
+end % END PLACE CELL PROCESSING
 %%
 if false
     spks = normalize_rows(ms.neuron.S)>0;
