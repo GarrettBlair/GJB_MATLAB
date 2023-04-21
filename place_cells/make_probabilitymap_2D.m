@@ -1,4 +1,4 @@
-function [vmap_time, vmap_counts, xbin, ybin] = make_probabilitymap_2D(pos_x, pos_y, signal, bins_x, bins_y)
+function [prob_map, vmap_counts, xbin, ybin] = make_probabilitymap_2D(pos_x, pos_y, signal, bins_x, bins_y)
 %%
 %%%% INPUT:
 % pos_x, pos_y   = x,y values of position samples, should be speed filtered already
@@ -24,13 +24,13 @@ end
 
 nx_bins = length(bins_x)-1;
 ny_bins = length(bins_y)-1;
-[vmap_counts, ~, ~, xbin, ybin] = histcounts2(pos_x, pos_y, bins_x, bins_y);
-vmap_time = NaN(ny_bins, nx_bins);
-for i=1:nx_bins
-    for j = 1:ny_bins
-        if any(j==ybin & i==xbin)
-            currentbin = i==xbin & j==ybin;
-            vmap_time(j,i) = sum(signal(currentbin))/sum(currentbin);
+[vmap_counts, ~, ~, ybin, xbin] = histcounts2(pos_y, pos_x, bins_y, bins_x);
+prob_map = NaN(ny_bins, nx_bins);
+for i=1:ny_bins
+    for j = 1:nx_bins
+        if any(i==ybin & j==xbin)
+            currentbin = j==xbin & i==ybin;
+            prob_map(i,j) = sum(signal(currentbin))/sum(currentbin);
         end
     end
 end

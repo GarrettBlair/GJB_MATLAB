@@ -30,11 +30,12 @@ fprintf('\n%d files found:', sess_num);
 ms_file_names = ms_file_names(1:sess_num);
 ms_sess_name = ms_sess_name(1:sess_num);
 for i = 1:sess_num
-    fprintf('\n\t%s', ms_sess_name{sess_num});
+    fprintf('\n\t%s', ms_sess_name{i});
 end
 
 if ~isempty(sessions2match)
     ms_file_names = ms_file_names(sessions2match);
+    ms_sess_name  = ms_sess_name(sessions2match);
 else
     sessions2match = 1:length(ms_file_names);
 end
@@ -43,13 +44,12 @@ end
 % warning('subsampling for test!')
 
 numsess = length(ms_file_names);
-
+% numsess = 3
 
 % sessNum = sessions2match(1);
-cname = sprintf('%s\\%s\\', save_dir, animal_name);
-if ~isfolder(cname)
-    fprintf('\nSave dir created: \n\t%s\n', cname)
-    mkdir(cname);
+if ~isfolder(save_dir)
+    fprintf('\nSave dir created: \n\t%s\n', save_dir)
+    mkdir(save_dir);
 end
 %%
 % load(aligned_fname, 'aligned_data_struct');
@@ -71,7 +71,8 @@ corrected_spatial_footprints = cell(numsess,1);
 corrected_footprints_projections = cell(numsess,1);
 
 down_right_corrections = zeros(numsess, 2);
-scaling_corrections = ones(numsess, 1);
+scaling_corrections = ones(numsess, 2);
+% scaling_corrections_RC = ones(numsess, 2);
 
 
 % max_raw = cell(1, numsess);
@@ -81,10 +82,11 @@ scaling_corrections = ones(numsess, 1);
 % max_ne_neg = cell(1, numsess);
 %%
 fprintf('\nBG image - Session: ');
-fields2use = {'minFrame', 'meanFrame', 'corr_im', 'pnr_im'};
-fieldsOut = {'min_frame', 'max_raw', 'max_ne', 'max_ne_neg'};
+fields2use = {'meanFrame', 'corr_im', 'pnr_im'};
+fieldsOut = {'max_raw', 'max_ne', 'max_ne_neg'};
+min_frame = cell(1,numsess);
 bg_size = [1 1]; %imresize(aligned_data_struct.overlapping_FOV, 1.5);
-for ii = 1:4
+for ii = 1:length(fields2use)
     eval(sprintf('%s = cell(1,numsess);', fieldsOut{ii}));
 end
 for i = 1:numsess
@@ -93,9 +95,9 @@ for i = 1:numsess
     %     fprintf('%d.. ', i);
     temp =  load(fname, 'ms');
     
-    for ii = 1:4
+    for ii = 1:length(fields2use)
         eval(sprintf(' im = temp.ms.neuron.%s;', fields2use{ii}));
-        if var(im(:))<=1 && any(ii == [1 2])% low variance, prob blank/zeros
+        if var(im(:))<=1 && any(ii == [1])% low variance, prob blank/zeros
             im = temp.ms.neuron.meanFrame;
             warning('\nLow variance for field %s, using mean instead\n', fields2use{ii})
         end
@@ -103,6 +105,10 @@ for i = 1:numsess
         imn = imn./quantile(imn(:), .999);
         eval(sprintf('%s{1,i} = imn;', fieldsOut{ii}));
     end    
+    im = temp.ms.neuron.maxFrame - temp.ms.neuron.minFrame;
+    imn = im - quantile(im(:), .01);
+    imn = imn./quantile(imn(:), .999);
+    min_frame{i} = imn;
 %     imne = imn - anisodiff2D(imn, 50, 1/7, 30, 2);
 %     imne([1:10, end-10:end], :) = 0;
 %     imne(:, [1:10, end-10:end]) = 0;
@@ -122,7 +128,7 @@ fprintf(' Done! \n');
 %%
 fprintf('Contours - Session: ');
 for i = 1:numsess
-    %
+    %%
     fname = ms_file_names{i};
     fprintf('\n\t%s.. ', fname);
     temp =  load(fname, 'ms');
@@ -160,9 +166,14 @@ for i = 1:numsess
 % %         thresh_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(aa(:,seg)>0, [h, w]);
 %         thresh_conts(seg, targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = reshape(aa(:,seg), [h, w]);
 %     end
+%%
     bg1 = bg;
     bg1(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = max_raw{1,i};
     max_raw{1,i} = bg1;
+
+    bg1 = bg;
+    bg1(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = min_frame{1,i};
+    min_frame{1,i} = bg1;
     
     bg1 = bg;
     bg1(targ_inds(1):(targ_inds(1)+h-1), targ_inds(2):(targ_inds(2)+w-1)) = max_ne{1,i};
@@ -181,7 +192,7 @@ fprintf(' Done! \n');
 s = 0;
 cm_fig = figure;
 set(cm_fig, 'Position', [100 100 1539 821]);
-set(gcf, 'Name', 'Arrows to move pink, space toggle shift size, q-confirm, r-reset, a/z resize up/down, c change background, v toggle all corrected contours')
+set(gcf, 'Name', 'Arrows to move pink, space toggle shift size, [q]Confirm, [r]Reset, [a/z]Resize all, [s/x]Rows, [d/c]Cols, [e]Change bg, [v]Toggle all corrected contours')
 
 
 ref_contour_projection = footprints_projections{ref_session};
@@ -202,13 +213,17 @@ end
 targ_contour_projection = [];
 main_denom = numsess/3;%1.2;
 other_denom = numsess;
-    tc = clock;
-for i = 1:numsess
+tc = clock;
+i = 1;
+
+for i = 1:numsess % while i<numsess % 
     %%
     starting_guess = true;
     click_count = 0;
     click_shift = false;
     xx = NaN(2,1); yy = NaN(2,1);
+    main_denom = i+1;%1.2;
+
     if i ~= ref_session
         target_idx = i;%target_indices(i);
         if  isempty(targ_contour_projection)
@@ -217,42 +232,10 @@ for i = 1:numsess
         else
             targ_contour_projection = corrected_target_contours;
         end
-        
-        if mod(scatter_pnr,2) == 1
-                all_proj_r = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,1))/main_denom);%/main_denom; % ref session is grey
-                all_proj_g = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,2))/main_denom);%/main_denom; % ref session is grey
-                all_proj_b = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,3))/main_denom);%/main_denom; % ref session is grey
-                corr_sessns = setdiff(1:i, [ref_session i]);
-                for ii2 = 1:length(corr_sessns)
-                    thissess = corr_sessns(ii2);
-                    all_proj_r = all_proj_r + footprints_projections{thissess}.*(sess_colors(thissess,1)/other_denom); % previous sessions are dull color
-                    all_proj_g = all_proj_g + footprints_projections{thissess}.*(sess_colors(thissess,2)/other_denom); % previous sessions are dull color
-                    all_proj_b = all_proj_b + footprints_projections{thissess}.*(sess_colors(thissess,3)/other_denom); % previous sessions are dull color
-                end
-                all_proj_r = all_proj_r + corrected_target_contours.*(sess_colors(target_idx,1)/main_denom); % current session is bright color
-                all_proj_g = all_proj_g + corrected_target_contours.*(sess_colors(target_idx,2)/main_denom); % current session is bright color
-                all_proj_b = all_proj_b + corrected_target_contours.*(sess_colors(target_idx,3)/main_denom); % current session is bright color
-                all_proj = cat(3, all_proj_r, all_proj_g, all_proj_b);
-                im = 1.2*all_proj./max(all_proj(:));% make_color_im(bg*0, corrected_target_contours*.2, ref_contour_projection*.2, corrected_target_contours*.2);
-        else
-            im = make_color_im(bg*0, targ_contour_projection, ref_contour_projection, targ_contour_projection);
-        end
-%         if starting_guess == true
-%             xc = xcorr2(corrected_target_contours*1, 1*ref_contour_projection);
-%             [~, mxc] = max(xc, [], 1);
-%             [~, mi] = max(xc(:));
-%             [mr, mc] = ind2sub([size(xc)], mi);
-%             shifth = size(corrected_target_contours,1) - mr;
-%             shiftw = size(corrected_target_contours,2) - mc;
-%             corrected_target_contours = circshift(corrected_target_contours, shifth, 1);
-%             corrected_target_contours = circshift(corrected_target_contours, shiftw, 2);
-%             
-%             starting_guess = false;
-%         end
-%         down_right_shift = [shifth shiftw];
-%         resize_val = scaling_corrections(target_idx);
+                
         down_right_shift = down_right_corrections(target_idx,:);
-        resize_val = scaling_corrections(target_idx);
+        resize_val = scaling_corrections(target_idx,:);
+%         resize_val_rc = scaling_corrections(target_idx);
         
         switch mod(raw_option, 4)
             case 0
@@ -266,11 +249,31 @@ for i = 1:numsess
         end
         targ_im = max_image{1,target_idx};
         raw_im = make_color_im(bg*0, targ_im, max_image{1,ref_session}, targ_im);
+        im = make_color_im(bg*0, targ_contour_projection, ref_contour_projection, targ_contour_projection);
         
         button = 1;
         %%
         while button~=113 % q
             %%
+%             if mod(scatter_pnr,2) == 1
+%                 all_proj_r = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,1))/main_denom);%/main_denom; % ref session is grey
+%                 all_proj_g = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,2))/main_denom);%/main_denom; % ref session is grey
+%                 all_proj_b = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,3))/main_denom);%/main_denom; % ref session is grey
+%                 corr_sessns = setdiff(1:i, [ref_session i]);
+%                 for ii2 = 1:length(corr_sessns)
+%                     thissess = corr_sessns(ii2);
+%                     all_proj_r = all_proj_r + footprints_projections{thissess}.*(sess_colors(thissess,1)/other_denom); % previous sessions are dull color
+%                     all_proj_g = all_proj_g + footprints_projections{thissess}.*(sess_colors(thissess,2)/other_denom); % previous sessions are dull color
+%                     all_proj_b = all_proj_b + footprints_projections{thissess}.*(sess_colors(thissess,3)/other_denom); % previous sessions are dull color
+%                 end
+%                 all_proj_r = all_proj_r + corrected_target_contours.*(sess_colors(target_idx,1)/main_denom); % current session is bright color
+%                 all_proj_g = all_proj_g + corrected_target_contours.*(sess_colors(target_idx,2)/main_denom); % current session is bright color
+%                 all_proj_b = all_proj_b + corrected_target_contours.*(sess_colors(target_idx,3)/main_denom); % current session is bright color
+%                 all_proj = cat(3, all_proj_r, all_proj_g, all_proj_b);
+%                 im = 1.2*all_proj./max(all_proj(:)).*300;% make_color_im(bg*0, corrected_target_contours*.2, ref_contour_projection*.2, corrected_target_contours*.2);
+%             else
+%                 im = make_color_im(bg*0, targ_contour_projection, ref_contour_projection, targ_contour_projection);
+%             end
             
             im_lims = [find(any(sum(im,3),1), 1)-20, find(any(sum(im,3),1), 1, 'last')+20,...
                 find(any(sum(im,3),2), 1)-20, find(any(sum(im,3),2), 1, 'last')+20];
@@ -294,8 +297,8 @@ for i = 1:numsess
             image(raw_im);
             axis image off
             axis(im_lims)
-            text(im_lims(1)+5, im_lims(3)+5, sprintf('Shifts: [x:%d y:%d]  to  scale: %1.2f',...
-                down_right_shift(2), down_right_shift(1), resize_val), 'Color', 'w', 'FontSize', 16);
+            text(im_lims(1)+5, im_lims(3)+5, sprintf('Shifts: [x:%d y:%d]  to  scale: [r-%1.2f, c-%1.2f]',...
+                down_right_shift(2), down_right_shift(1), resize_val(1), resize_val(2)), 'Color', 'w', 'FontSize', 16);
             if ~isempty(record_name)
                 temp = getframe(gcf);
                 v.writeVideo(temp.cdata);
@@ -304,7 +307,7 @@ for i = 1:numsess
             step_size = round(9*abs(sin(s)) + 1);
             if ~isempty(button)
                 switch button
-                    case {3, 99} % right click OR 'c'
+                    case {3, 101} % right click OR 'e'
                         raw_option = raw_option + 1;
                         switch mod(raw_option, 4)
                             case 0
@@ -318,12 +321,7 @@ for i = 1:numsess
                         end
                     case 114 % r, reset shifts
                         down_right_shift = [0 0];
-                        resize_val = 1;
-%                     case 98 % b, back targ sess
-%                         if i > 1
-%                             i = i-1
-%                             button = 113; % q
-%                         end
+                        resize_val = [1 1];
                     case 28 % left
                         down_right_shift(2) = down_right_shift(2) - step_size;
                     case 29 % right
@@ -336,10 +334,25 @@ for i = 1:numsess
                         s = s+.5*pi; % steps in either 20 or 1 picel; toggles
                     case 97 % a, resize up
                         resize_val = resize_val + resize_step_size;
+                    case 115 % s, resize rows up
+                        resize_val(1) = resize_val(1) + resize_step_size;
+                    case 120 % x, resize rows down
+                        resize_val(1) = resize_val(1) - resize_step_size;
+                    case 100 % d, resize cols up
+                        resize_val(2) = resize_val(2) + resize_step_size;
+                    case 99 % c, resize cols down
+                        resize_val(2) = resize_val(2) - resize_step_size;
                     case 118 % v, toggle snr scatter
                         scatter_pnr = scatter_pnr+1;
                     case 122 % a, resize down
                         resize_val = resize_val - resize_step_size;
+%                     case 8 % bkspc, previous contours
+%                         if i-1 == ref_session
+%                             i = i-3;
+%                         else
+%                             i = i-2;
+%                         end
+%                         button = 113;
                     case 1 % LClick, clicking to move
                         click_count = click_count+1;
                         click_ind = mod(click_count+1, 2)+1;
@@ -358,7 +371,8 @@ for i = 1:numsess
             down_right_shift = round(down_right_shift);
             
             % RESIZING CONTOURS
-            temp_targ_cs = imresize(targ_contour_projection, resize_val, 'nearest');
+            resize_target = round(size(targ_contour_projection).*resize_val);
+            temp_targ_cs = imresize(targ_contour_projection, resize_target, 'nearest');
             if size(temp_targ_cs, 1) > size(bg, 1)
                 ad =  abs(size(bg, 1) - size(temp_targ_cs, 1))/2;
                 temp_targ_cs = temp_targ_cs(floor(ad)+1:end-ceil(ad), :);
@@ -391,7 +405,8 @@ for i = 1:numsess
                 im = make_color_im(bg*0, corrected_target_contours, ref_contour_projection, corrected_target_contours);
             end
             % RESIZING IMAGE
-            targ_im = imresize(max_image{1,target_idx}, resize_val);
+            resize_target = round(size(max_image{1,target_idx}).*resize_val);
+            targ_im = imresize(max_image{1,target_idx}, resize_target);
             if size(targ_im, 1) > size(bg, 1)
                 ad =  abs(size(bg, 1) - size(targ_im, 1))/2;
                 targ_im = targ_im(floor(ad)+1:end-ceil(ad), :);
@@ -408,14 +423,17 @@ for i = 1:numsess
         end
         
         down_right_corrections(target_idx,:) = down_right_shift;
-        scaling_corrections(target_idx) = resize_val;
+        scaling_corrections(target_idx,:) = resize_val;
+%         scaling_corrections_RC(target_idx, :) = resize_val;
         footprints_projections{i} = corrected_target_contours>0;
     else
         target_idx = ref_session;
     end
     stemp = spatial_footprints{target_idx};
     stemp = shiftdim(stemp,1); % make it height x width x cells
-    stemp = imresize(stemp, scaling_corrections(target_idx));
+    resize_target = round([size(stemp,1) size(stemp,2)].*scaling_corrections(target_idx,:));
+
+    stemp = imresize(stemp, resize_target);
     
     if size(stemp, 1) > size(bg, 1)
         ad =  abs(size(bg, 1) - size(stemp, 1))/2;
@@ -447,17 +465,9 @@ for i = 1:numsess
     corrected_spatial_footprints{target_idx} = single(stemp); % for Hipp8 or large files
     corrected_footprints_projections{target_idx} = cproj;
     targ_contour_projection = [];
+    
+%     i = i+1
 
-%     sessNum = sessions2match(i);
-%     cname = sprintf('%s\\%s\\contours_shifted_linear%d.mat', save_dir, animal_name, sessNum);
-%     fprintf('\nSaving: \n\t%s', cname);
-%     contours_shifted = corrected_spatial_footprints{i}(:, max_contour_inds(1):max_contour_inds(2),  max_contour_inds(3):max_contour_inds(4));
-%     save(cname, 'contours_shifted', '-v7.3');
-%     newfname = sprintf('%s\\%s\\%s_manual_match_%d_%d_%d_H%d_M%d.mat', save_dir, animal_name, animal_name, tc(1), tc(2), tc(3), tc(4), tc(5));
-%     save(newfname, 'ms_file_names', 'sessions2match', 'down_right_corrections', 'scaling_corrections', '-v7.3');
-%     
-%     corrected_spatial_footprints{i} = [];
-%     spatial_footprints{i} = [];
 end
 %%
 if ~isempty(record_name)
@@ -469,7 +479,7 @@ end
 
 for i = 1:numsess
 %     sessNum = sessions2match(i);
-    cname = sprintf('%s\\%s\\%s.mat', save_dir, animal_name, ms_sess_name{i});
+    cname = sprintf('%s\\%s', save_dir, ms_sess_name{i});
     fprintf('\nSaving: \n\t%s', cname);
     contours_shifted = corrected_spatial_footprints{i}(:, max_contour_inds(1):max_contour_inds(2),  max_contour_inds(3):max_contour_inds(4));
     save(cname, 'contours_shifted', '-v7.3');
@@ -479,10 +489,28 @@ for i = 1:numsess
 end
 
 % tc = clock;
-newfname = sprintf('%s\\%s\\%s_manual_match_%d_%d_%d_H%d_M%d.mat', save_dir, animal_name, animal_name, tc(1), tc(2), tc(3), tc(4), tc(5));
+newfname = sprintf('%s\\%s_manual_match_%d_%d_%d_H%d_M%d.mat', save_dir, animal_name, tc(1), tc(2), tc(3), tc(4), tc(5));
 fprintf('%s\n', newfname)
 % save(newfname, 'ms_file_names', 'sessions2match', 'down_right_corrections', 'scaling_corrections', 'corrected_footprints_projections', 'corrected_centroid_locations', '-v7.3');
 save(newfname, 'ms_file_names', 'ms_sess_name', 'sessions2match', 'down_right_corrections', 'scaling_corrections', 'max_contour_inds', '-v7.3');
 cd(currentDir);
 fprintf('\nDONE!\n')
 
+end
+% function [im] = make_session_projection(ref_contour_projection, ref_session, target_idx, corrected_target_contours, footprints_projections, main_denom, sess_colors, i)
+%     all_proj_r = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,1))/main_denom);%/main_denom; % ref session is grey
+%     all_proj_g = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,2))/main_denom);%/main_denom; % ref session is grey
+%     all_proj_b = ref_contour_projection/main_denom; % .*((1 - sess_colors(thissess,3))/main_denom);%/main_denom; % ref session is grey
+%     corr_sessns = setdiff(1:i, [ref_session i]);
+%     for ii2 = 1:length(corr_sessns)
+%         thissess = corr_sessns(ii2);
+%         all_proj_r = all_proj_r + footprints_projections{thissess}.*(sess_colors(thissess,1)/other_denom); % previous sessions are dull color
+%         all_proj_g = all_proj_g + footprints_projections{thissess}.*(sess_colors(thissess,2)/other_denom); % previous sessions are dull color
+%         all_proj_b = all_proj_b + footprints_projections{thissess}.*(sess_colors(thissess,3)/other_denom); % previous sessions are dull color
+%     end
+%     all_proj_r = all_proj_r + corrected_target_contours.*(sess_colors(target_idx,1)/main_denom); % current session is bright color
+%     all_proj_g = all_proj_g + corrected_target_contours.*(sess_colors(target_idx,2)/main_denom); % current session is bright color
+%     all_proj_b = all_proj_b + corrected_target_contours.*(sess_colors(target_idx,3)/main_denom); % current session is bright color
+%     all_proj = cat(3, all_proj_r, all_proj_g, all_proj_b);
+%     im = 1.2*all_proj./max(all_proj(:)).*300;% make_color_im(bg*0, corrected_target_contours*.2, ref_contour_projection*.2, corrected_target_contours*.2);
+% end

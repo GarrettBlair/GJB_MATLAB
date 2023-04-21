@@ -32,11 +32,12 @@ roll2 = atan2(sinr_cosp, cosr_cosp);
 % pitch (y-axis rotation)
 sinp = 2 * (q.w .* q.y - q.z .* q.x);
 pitch2 = asin(sinp);
-% % if abs(sinp) >= 1
+% if abs(sinp) >= 1
 % %     pitch2 = copysign(pi / 2, sinp); % use 90 degrees if out of range
-% % else
-% %     pitch2 = asin(sinp);
-% % end
+%     pitch2 = sign(sinp)*pi/2; % use 90 degrees if out of range
+% else
+%     pitch2 = asin(sinp);
+% end
 % yaw (z-axis rotation)
 siny_cosp = 2 * (q.w .* q.z + q.x .* q.y);
 cosy_cosp = 1 - 2 * (q.y .* q.y + q.z .* q.z);

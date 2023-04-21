@@ -1,6 +1,6 @@
-function cmap = light_colormap(cmap, kappa)
+function cmap_out = light_colormap(cmap_in, kappa)
 if kappa>0
-cmap = cmap + (1-cmap)/kappa;
+cmap_out = cmap_in + (1-cmap_in)/kappa;
 elseif kappa<0
-cmap = cmap - (1-cmap)/abs(kappa);
+cmap_out = cmap_in - (cmap_in)/abs(kappa);
 end

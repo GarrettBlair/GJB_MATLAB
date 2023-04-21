@@ -24,13 +24,13 @@ end
 
 nx_bins = length(bins_x)-1;
 ny_bins = length(bins_y)-1;
-[vmap_counts, ~, ~, xbin, ybin] = histcounts2(pos_x, pos_y, bins_x, bins_y);
+[vmap_counts, ~, ~, ybin, xbin] = histcounts2(pos_y, pos_x, bins_y, bins_x);
 vmap_time = NaN(ny_bins, nx_bins);
-for i=1:nx_bins
-    for j = 1:ny_bins
-        if any(j==ybin & i==xbin)
-            currentbin = i==xbin & j==ybin;
-            vmap_time(j,i) = sum(signal(currentbin));
+for i=1:ny_bins
+    for j = 1:nx_bins
+        if any(i==ybin & j==xbin)
+            currentbin = j==xbin & i==ybin;
+            vmap_time(i,j) = sum(signal(currentbin));
         end
     end
 end

@@ -35,13 +35,15 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 
 %
 % animals = {'Hipp16942'};
-% animals = {'Hipp18240'};
-animals = {'Acc20832', 'Acc19947'};
+animals = {'Hipp18240'};
+% animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
 analysis_version = 'v1.0';
 dir_list_fname = '_directory_list.csv';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/';
-experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
+% experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
+experiment_folder = 'D:/APA recordings/';
+
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
 rerun_behav         = false;
@@ -58,6 +60,7 @@ PRINT_ONLY = false;
 %%
 % APA_behav_eval(experiment_folder, animals, sess2plot, wtr, plot_hab, params);
 % APA_behav_eval(experiment_folder, animals, params);
+
 for animalLoop = 1:numAnimals
     %%
     animal_name = animals{animalLoop};
@@ -182,6 +185,8 @@ for animalLoop = 1:numAnimals
         matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc19947\matching_contours\manual_alignment\matching_matrix.mat';
         cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc20832\matching_contours\manual_alignment\Acc20832\cellreg\';
         matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Acc20832\matching_contours\manual_alignment\matching_matrix.mat';
+        cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\OCAM imaging\Hipp18240\matching_contours\cellreg\';
+        matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\OCAM imaging\Hipp18240\matching_contours\matching_matrix.mat';
 %         cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\cell_reg\';
 %         matching_fileName = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\matching_contours\matching_matrix.mat';
 %         cellreg_dir = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\WTR_manip\matching_contours\cellreg\';

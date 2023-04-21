@@ -1,9 +1,14 @@
-function [peth_mean, peth_std, peth_pre, num_events, peth_p, peth_diff, P] = gb_PETH(sig, event, pre, post)
+function [P, peth_mean, peth_std, peth_pre, num_events, peth_p, peth_diff] = gb_PETH(sig, event, pre, post)
 
-if ~any(size(sig)==length(event))
+if islogical(event) && ~any(size(sig)==length(event))
     error('At least one dim of signal and event must be the same size')
     return
+elseif ~islogical(event)
+    event_inds = event;
+    event = false(length(sig), 1);
+    event(event_inds) = true;
 end
+
 % if islogical(sig)
 % %     bin_e = 1:8:length(sig);
 % %     bin_width = mean(diff(bin_e))/2;

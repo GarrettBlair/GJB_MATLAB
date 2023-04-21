@@ -9,11 +9,11 @@ ActivityThreshold=1; % orig=1
 % downsample_flag=0;%%GJB
 downsample_flag=0;%% orig=2, conv method; 0=no ds; 1=slicing ds
 % downsample_flag=1;%% GJB
-ActvitySmoothingSize=1;%% orig=2
-% ActvitySmoothingSize=1;%%GJB
+ActvitySmoothingSize=0;%% orig=2
+% ActvitySmoothingSize=0;%%GJB
 
-% p_neighbors_vec=[0.075/15 0.075];%% orig
-p_neighbors_vec=[0.075/15 0.075];%% GJB
+p_neighbors_vec=[0.075/15 0.075];%% orig
+% p_neighbors_vec=[0.075/15 0.075];%% GJB
 % p_neighbors_vec=[0.075 0.075/15];%% GJB
 % p_neighbors_vec=[4 15] %GJB 19AQ
 % p_neighbors_vec=[.25/15 .25] %GJB

@@ -66,8 +66,9 @@ W = max(W,W');
 ld = diag(sum(W,2).^(-1/2));
 DO = ld*W*ld;
 DO = max(DO,DO');
-
-[v2,d2] = eigs(DO,10,'la');
+%%%%%%%%%%%%%% GJB changed to 4 fom 10 dims
+% [v2,d2] = eigs(DO,10,'la');
+[v2,d2] = eigs(DO,4,'la');
 
 ReducedDataArray{1}=data;
 ReducedDataArray{2}=v;

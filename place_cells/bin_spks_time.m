@@ -24,7 +24,7 @@ if sliding_method == true
     end
 else
     %%%% Compute summation with fixed bins, no sliding
-    grouped_time = cumsum(diff(mod(time_vec, time_res))<0);
+    grouped_time = [1 cumsum(diff(mod(time_vec, time_res))<0)];
     nsub = max(grouped_time); % floor(nsamples/window_size)+1;
     % first calc the number of spikes within the time resolution window time_res
     last_group = find(nsub == grouped_time);
