@@ -10,6 +10,7 @@ segID = 1:size(A,2);
 if issparse(A)
     A = full(A);
 end
+A = normalize_cols(A);
 contours = gbContours(A, dims, [], .6);
 
 %
@@ -19,11 +20,21 @@ else
     background = background - min(background(:));
     background = background/max(background(:));
 end
-
+%%
 if exist('idx_components', 'var') && ~isempty(idx_components)
-    mc = squeeze(sum(contours(idx_components, :, :), 1));
+%     mc = squeeze(sum(contours(idx_components, :, :), 1));
+    bmap = viridis(length(idx_components)*4);
+    bmap = bmap(randperm(length(idx_components)*4), :);
+    bmap(:,1) = 0;
+    bmap = ones(length(idx_components),1)*[0 1 .3];
+    mc = color_contours_im(contours(idx_components, :, :), bmap);
     idx_components_bad = setdiff(segID, idx_components);
-    bc = squeeze(sum(contours(idx_components_bad, :, :), 1));
+%     bc = squeeze(sum(contours(idx_components_bad, :, :), 1));
+    bmap = plasma(length(idx_components_bad)*4);
+        bmap = bmap(randperm(length(idx_components_bad)*4), :);
+    bmap(:,2) = 0;
+    bmap = ones(length(idx_components),1)*[1 0 .3];
+    bc = color_contours_im(contours(idx_components_bad, :, :), bmap );
 else
     if ~any(background(:))
         mc = squeeze(sum(contours, 1))>0;
@@ -40,9 +51,10 @@ end
 bc = bc*3; mc = mc*3;
 %
 im = zeros(dims(1), dims(2), 3);
-im(:,:,1) = background*.9 + bc;
-im(:,:,2) = background*.9 + mc;
-im(:,:,3) = background*.9;
+im = background*.8 + bc*.1 + mc*.1;
+% im(:,:,1) = background*.9 + bc;
+% im(:,:,2) = background*.9 + mc;
+% im(:,:,3) = background*.9;
 %
 h = figure(375); clf; 
 set(gcf, 'Position', [224 183 1332 769])
@@ -54,6 +66,7 @@ hold on
 ind = 1;
 opx = [];
 opy = [];
+%%
 if ~skip_flag
     [opx(ind, 1), opy(ind, 1), button] = ginput(1);
 else
@@ -70,7 +83,7 @@ if button~=113 % if not q get points
         [opx(ind), opy(ind), button] = ginput(1);
         if button == 114 % r
             % restart
-            figure(1); clf; subplot_tight(1,2,1)
+            figure(375); clf; subplot_tight(1,2,1)
             image(im);
             axis image
             title('Draw polygon! Click near first point to end, q=quit, r=restart')
@@ -120,19 +133,40 @@ bounds.mh2 = min(find(sum(mc,2), 1, 'last')+edge, size(mc,1));
 bounds.mw1 = max(find(sum(mc,1), 1, 'first')-edge, 1);
 bounds.mw2 = min(find(sum(mc,1), 1, 'last')+edge, size(mc,2));
 
-bc = squeeze(sum(contours(~good_flag, :, :), 1));
+% bc = squeeze(sum(contours(~good_flag, :, :), 1));
+idx_components = find(good_flag);
+bmap = viridis(length(idx_components)*4);
+bmap = bmap(randperm(length(idx_components)*4), :);
+bmap(:,1) = 0;
+mc = color_contours_im(contours(idx_components, :, :), bmap);
+idx_components_bad = setdiff(segID, idx_components);
+
+if any(idx_components_bad)
+    bmap = plasma(length(idx_components_bad)*4);
+    bmap = bmap(randperm(length(idx_components_bad)*4), :);
+    bmap(:,2) = 0;
+    bc = color_contours_im(contours(idx_components_bad, :, :), bmap );
+else
+    bc = 0;
+end
+
 figure(h);
 subplot_tight(1,2,2)
+bc = bc*3; mc = mc*3;
+%
 im = zeros(dims(1), dims(2), 3);
-im(:,:,1) = background*.9 + bc;
-im(:,:,2) = background*.9 + mc;
-im(:,:,3) = background*.9;
-im = im(bounds.mh1:bounds.mh2, bounds.mw1:bounds.mw2, :);
+im = background*.8 + bc*.1 + mc*.1;
+
+% im(:,:,1) = background*.9 + bc;
+% im(:,:,2) = background*.9 + mc;
+% im(:,:,3) = background*.9;
+% im = im(bounds.mh1:bounds.mh2, bounds.mw1:bounds.mw2, :);
 
 image(im); hold on
 % plot([opx opx(1)]-bounds.mw1, [opy opy(1)]-bounds.mh1, 'mo-')
 title(sprintf('Inside: %d  ,   Outside: %d', sum(good_flag), sum(~good_flag)))
-axis([ 0 bounds.mw2-bounds.mw1 0 bounds.mh2-bounds.mh1])
+rectangle('Position', [ bounds.mw1 bounds.mh1 bounds.mw2-bounds.mw1 bounds.mh2-bounds.mh1 ], 'EdgeColor', 'g')
+% axis([ 0 bounds.mw2-bounds.mw1 0 bounds.mh2-bounds.mh1])
 axis image
 drawnow;
 

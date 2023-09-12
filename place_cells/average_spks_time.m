@@ -22,7 +22,11 @@ if sliding_method == true
     end
 else
     %%%% Compute summation with fixed bins, no sliding
+    try
     grouped_time = [1; cumsum(diff(mod(time_vec, time_res))<0)];
+    catch
+    grouped_time = [1  cumsum(diff(mod(time_vec, time_res))<0)];
+    end
     nsub = max(grouped_time); % floor(nsamples/window_size)+1;
     % first calc the number of spikes within the time resolution window time_res
     last_group = find(nsub == grouped_time);
@@ -38,6 +42,8 @@ else
             case 'sum'
                 averagespks(:, i) = sum(spks(:, grouped_time==i), 2);
             case 'mean'
+                averagespks(:, i) = mean(spks(:, grouped_time==i), 2);
+            case 'average'
                 averagespks(:, i) = mean(spks(:, grouped_time==i), 2);
             case 'median'
                 averagespks(:, i) = median(spks(:, grouped_time==i), 2);

@@ -3,7 +3,7 @@ function [sumspks, grouped_time] = bin_spks_time(spks, time_res, time_vec, slidi
 [nsegs, nsamples] = size(spks);
 [d1, d2] = size(time_vec);
 if nsegs>nsamples % && (nsegs>1 && nsamples>1)
-    warning('Input dimensions appear wrong; expected segs x time, but time>segs')
+    warning('Input dimensions appear wrong; expected segs x time, but time<segs')
     spks = spks';
     [nsegs, nsamples] = size(spks);
 end

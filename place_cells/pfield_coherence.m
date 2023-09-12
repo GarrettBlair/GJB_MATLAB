@@ -1,7 +1,7 @@
 %%
 % load('C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\APA_water\Hipp18240\processed_files\2022_09_14_H17_52_22_WTR8_@placecells.mat')
 pfields_r = ms.room.pfields;
-pfields_a = ms.room.pfields;
+pfields_a = ms.arena.pfields;
 [nsegs, nbins1, nbins2] = size(pfields_r);
 coh_room = NaN(nsegs,1);
 coh_arena= NaN(nsegs,1);
@@ -23,30 +23,32 @@ end
 %%
 for i = 1:nsegs
             p1 = squeeze(pfields_r(i,:,:));
+            if any(p1(:))
             p2 = squeeze(neighbor_av_r(i,:,:));
             pcheck = p1.*p2;
             valid = ~isnan(pcheck(:));
             coh_room(i) = corr(p1(valid), p2(valid));
             
-%             figure(2); clf
-%             subplot(221)
-%             imagesc(p1);
-%             title(sprintf('Room coh- %0.2f', coh_room(i)))
-%             subplot(222)
-%             imagesc(p2);
+            figure(2); clf
+            subplot(221)
+            imagesc(p1);
+            title(sprintf('Room coh- %0.2f', coh_room(i)))
+            subplot(222)
+            imagesc(p2);
             p1 = squeeze(pfields_a(i,:,:));
             p2 = squeeze(neighbor_av_a(i,:,:));
             pcheck = p1.*p2;
             valid = ~isnan(pcheck(:));
             coh_arena(i) = corr(p1(valid), p2(valid));
             
-%             subplot(223)
-%             imagesc(p1);
-%             title(sprintf('Arena coh- %0.2f', coh_arena(i)))
-%             subplot(224)
-%             imagesc(p2);
-%             drawnow
-%             pause(1)
+            subplot(223)
+            imagesc(p1);
+            title(sprintf('Arena coh- %0.2f', coh_arena(i)))
+            subplot(224)
+            imagesc(p2);
+            drawnow
+            pause(1)
+            end
             
 end
 % Z transform r values (Spearman to Fisher) : https://www.statisticshowto.com/fisher-z/

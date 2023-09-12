@@ -23,11 +23,13 @@ for i = 1:nsegs
     spkRate(i)  = sum(spks(i,:))/nframes;
     peakRate(i) = max(smap(:)./occupancy_map(:));
 end
-sparsity = pfield_sparsity(pfields);
+sparsity  = pfield_sparsity(pfields, occupancy_map);
+coherence = pfield_coherence_calc(pfields, occupancy_map);
 
 p.infoPerSpike = infoPerSpike;
 p.infoRate = infoRate;
 p.spkRate = spkRate;
 p.peakRate = peakRate;
 p.sparsity = sparsity;
+p.coherence = coherence;
 end

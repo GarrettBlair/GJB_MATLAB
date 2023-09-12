@@ -7,15 +7,19 @@ params_sub = params;
 
 % fname_position = sprintf('%sexperiment/behav_position_data.csv', recording_dir);
 recording_dir   = AnimalDir.SessionDir{sessionNum};
-
+miniscopeName    = AnimalDir.miniscopeName;
 % fname_position = sprintf('%sexperiment/behav_position_data.csv', recording_dir);
 % fname_params = sprintf('%sexperiment/behav_ext_params.json', recording_dir);
 room_tracking_fname   = AnimalDir.tracking_room{sessionNum};
 arena_tracking_fname  = AnimalDir.tracking_arena{sessionNum};
-caimanFilename = sprintf('%sMiniLFOV/caiman_cnmfe_out.mat', recording_dir);
-msTSFile = sprintf('%sMiniLFOV/timeStamps.csv', recording_dir);
-msCropFile = sprintf('%sMiniLFOV/Crop_params.mat', recording_dir);
-msOriFile = sprintf('%sMiniLFOV/headOrientation.csv', recording_dir);
+% if ~isfield(params, 'cameraName')
+%     params.cameraName = 'MiniLFOV';
+% end
+caimanFilename = sprintf('%s%s/caiman_cnmfe_out.mat', recording_dir, miniscopeName);
+msTSFile = sprintf('%s%s/timeStamps.csv', recording_dir, miniscopeName);
+msCropFile = sprintf('%s%s/Crop_params.mat', recording_dir, miniscopeName);
+msOriFile = sprintf('%s%s/headOrientation.csv', recording_dir, miniscopeName);
+msBadFramesFile = sprintf('%s%s/badFrames.mat', recording_dir, miniscopeName);
 
 % Read in the coresponding files
 
@@ -23,11 +27,23 @@ crop_params = load(msCropFile);
 params_sub.crop_params  = crop_params;
 % Generate the miniscope structure
 if isfile(msTSFile)
-    [ms] = make_ms_struct(recording_dir, msTSFile);
+    [ms] = make_ms_struct(recording_dir, msTSFile, miniscopeName);
 else
     error('No timestamp.csv file in directory:\n\t %s', recording_dir);
 end
 % Get the orientation data from BNO
+goodFrames = true(length(ms.frameNum),1);
+if isfile(msBadFramesFile)
+    temp = load(msBadFramesFile);
+    for j = 1:length(temp)
+        idx1 = eval(sprintf('temp.f%d(1)', j-1));
+        idx2 = eval(sprintf('temp.f%d(2)', j-1));
+        goodFrames(idx1:idx2) = false;
+    end
+    ms.msBadFramesFile = msBadFramesFile;
+end
+ms.goodFrames = goodFrames;
+
 if isfile(msOriFile)
     [ms] = make_ori_struct(ms, msOriFile);
 else
@@ -36,7 +52,7 @@ else
 end
 % Get the position data if extracted
 if isfile(room_tracking_fname) && isfile(arena_tracking_fname) 
-    [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname);
+    [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname, params_sub);
     behav.room = room;
     behav.arena = arena;
 % elseif exist(fname_position, 'file')==2
@@ -53,7 +69,7 @@ params = params_sub;
 
 end
 %%
-function [ms] = make_ms_struct(recording_dir, msTSFile)
+function [ms] = make_ms_struct(recording_dir, msTSFile, cameraName)
 global params_sub
 TS_data = readtable(msTSFile);
 if strcmp(TS_data.Properties.VariableNames{1}, 'Var1') % timestamps file was resaved after removing bad frames and col names were not saved
@@ -67,10 +83,10 @@ ms.parentDir = recording_dir;
 ms.spatialDownsample = params_sub.crop_params.spatialDownSample;
 ms.temporalDownsample = params_sub.crop_params.temporalDownSample;
 % ms.fileName = params_sub.crop_params.tiffStackout;
-ms.fileName = [ms.parentDir 'MiniLFOV/msCam_MC.tiff']; % params_sub.crop_params.tiffStackout;
-if ~isfile(ms.fileName)&& isfile([ms.parentDir 'MiniLFOV/msCam.tiff'])
+ms.fileName = [ms.parentDir cameraName '/msCam_MC.tiff']; % params_sub.crop_params.tiffStackout;
+if ~isfile(ms.fileName)&& isfile([ms.parentDir cameraName '/msCam.tiff'])
     % I prob changed the directory name since cropping
-    f = [ms.parentDir 'MiniLFOV/msCam.tiff'];
+    f = [ms.parentDir cameraName '/msCam.tiff'];
     params_sub.crop_params.tiffStackout = f;
     ms.fileName = params_sub.crop_params.tiffStackout;
 end
@@ -98,13 +114,15 @@ frameMismatch = length(ms.frameNum) ~= tiff_numFrames;
 if frameMismatch | any(matches_bad)
     warning('Diff found between imestamp file and tiff file!')
     % Keeping track of known files where this happens
-    switch ms.parentDir
-        case 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/Hipp16942/2022_06_10/18_25_10/'
+    if contains(ms.parentDir, 'Hipp16942/2022_06_10/18_25_10/')
             fprintf('\t%s\n', ms.parentDir)
             [ms] = cutoff_session(ms, tiff_numFrames);
-        case 'C:/Users/gjb326/Desktop/RecordingData/AlejandroGrau/TestMouse1/2022_07_05/17_09_41/'
+    elseif contains(ms.parentDir, 'PKCZ_imaging/mHPC23454/2023_08_13/17_35_20_RET10/')
+            fprintf('\t%s\n', ms.parentDir)
+            [ms] = cutoff_session(ms, tiff_numFrames);
+    elseif 'C:/Users/gjb326/Desktop/RecordingData/AlejandroGrau/TestMouse1/2022_07_05/17_09_41/'
             % do nothing, first 3 frames removed            
-        otherwise
+    else
             error('Unkown issue, update ''APA_troublesome_sessions.mat''')
     end
 end

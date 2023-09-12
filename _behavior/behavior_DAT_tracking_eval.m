@@ -2,6 +2,11 @@ function [room, arena, params] = behavior_DAT_tracking_eval(room_tracking_fname,
 % global params
 [room , room_params] = read_APA_csv(room_tracking_fname, []);
 [arena, arena_params] = read_APA_csv(arena_tracking_fname, []);
+if contains(arena_tracking_fname, '_HC')
+    warning('Homecage Arena file, no rotation, setting room and arena structures ==')
+    arena = room;
+end
+
 room.params = params;
 room.params.headerSize = room_params.headerSize;
 arena.params = params;
@@ -27,6 +32,11 @@ for strLoop = 1:length(strnames)
         %
         x = behav.rawx;
         y = behav.rawy;
+        if isfield(behav, 'Angle')
+            a = behav.Angle;
+            behav.raw_headangle = a;
+            headnan = a==-1;
+        end
         x(nanind) = NaN;
         y(nanind) = NaN;
         t = behav.timestamps;
@@ -40,6 +50,15 @@ for strLoop = 1:length(strnames)
             xn = interp1(ts(~nanind), x(~nanind), ts(nanind), 'linear');
             yn = interp1(ts(~nanind), y(~nanind), ts(nanind), 'linear');
             x(nanind) = xn; y(nanind) = yn;
+            if isfield(behav, 'Angle') && any(~headnan)
+                a(headnan) = interp1(ts(~headnan), a(~headnan), ts(headnan), 'linear');
+            end
+            if any(isnan([x(1) x(end) y(1) y(end)]))
+                nanind = isnan(x.*y);
+                xn = interp1(ts(~nanind), x(~nanind), ts(nanind), 'nearest', 'extrap');
+                yn = interp1(ts(~nanind), y(~nanind), ts(nanind), 'nearest', 'extrap');
+                x(nanind) = xn; y(nanind) = yn;
+            end
         end
         behav.wasnan = nanind;
         
@@ -60,6 +79,17 @@ for strLoop = 1:length(strnames)
         y = yn*-1; % flip y axis to align with cpu view
         
         behav.x = x; behav.y = y;
+        if isfield(behav, 'Angle')
+            a = deg2rad(a);
+            an = (unwrap(a));
+            an = conv(an, kern, 'same');
+            an(1:floor(ksize/2)+1) = an(floor(ksize/2)+2);
+            an(length(x)-floor(ksize/2):length(x)) = an(length(x)-floor(ksize/2)-1);
+            an = wrapTo2Pi(an);
+%             an(an>360) = 360; an(an<0) = 0;
+            a = an;
+            behav.Angle = rad2deg(a);
+        end
     end
     [behav.pol_theta, behav.pol_rho] = cart2pol(x,y);
     
@@ -95,5 +125,5 @@ for strLoop = 1:length(strnames)
 end
 %%
 
-end
 %%
+end

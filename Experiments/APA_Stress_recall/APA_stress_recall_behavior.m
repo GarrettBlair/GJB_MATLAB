@@ -1,5 +1,6 @@
 %%
-datfolder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\Stress_platform\DAT_files';
+% datfolder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\Stress_platform\DAT_files';
+datfolder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\OCAM imaging\DAT_files';
 animals = {'Hipp18239' 'Hipp18240' 'Hipp17861' 'Hipp17862' 'Hipp17863' 'Hipp17864'};
 is_stressed = [0 1 0 1 0 1]==1;
 TR_nums = [0:3; 24:27; 24:27; 0:3; 0:3; 0:3];
@@ -28,6 +29,7 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 
 num_entr = NaN(numA, numTR);
 num_shocks = NaN(numA, numTR);
+total_time = NaN(numA, numTR);
 for aLoop = 1:numA
     for sessLoop = 1:numTR
         room_tracking_fname    = sprintf('%s\\%s_TR%d_Room.dat', datfolder, animals{aLoop}, TR_nums(aLoop, sessLoop));
@@ -39,11 +41,28 @@ for aLoop = 1:numA
         tot_min = (room.timestamps(end)/1000)/60;
         num_entr(aLoop, sessLoop) = room.num_entrances;%/tot_min;
         num_shocks(aLoop, sessLoop) = room.num_shocks;%/tot_min;
+        total_time(aLoop, sessLoop) = tot_min;
+        figure(8);
+        subplot(numA, numTR, numTR*(aLoop-1) + sessLoop)
+        plot3(room.x, room.y, room.timestamps./1000)
+        figure(9);
+        subplot(numA, numTR, numTR*(aLoop-1) + sessLoop)
+        room_vmap = histcounts(room.pol_theta, [-pi:pi/12:pi]);
+%         room_vmap = make_occupancymap_2D(room.x, room.y, room.timestamps./1000, params.pos_bins, params.pos_bins);
+        room_vmap = room_vmap-min(room_vmap(:));
+        room_vmap = room_vmap./max(room_vmap(:));
+        plot(room_vmap)
+        
     end
 end
 %%
-num_entr_tot    = [num_entr(:, 1)+num_entr(:, 2), num_entr(:, 3)+num_entr(:, 4)];
-num_shocks_tot  = [num_shocks(:, 1)+num_shocks(:, 2), num_shocks(:, 3)+num_shocks(:, 4)];
+% num_entr_tot    = [num_entr(:, 1)+num_entr(:, 2), num_entr(:, 3)+num_entr(:, 4)];
+% num_shocks_tot  = [num_shocks(:, 1)+num_shocks(:, 2), num_shocks(:, 3)+num_shocks(:, 4)];
+num_entr_tot    = [(num_entr(:, 1)+num_entr(:, 2))./(total_time(:, 1)+total_time(:, 2)),...
+    (num_entr(:, 3)+num_entr(:, 4))./(total_time(:, 3)+total_time(:, 4))];
+num_shocks_tot    = [(num_shocks(:, 1)+num_shocks(:, 2))./(total_time(:, 1)+total_time(:, 2)),...
+    (num_shocks(:, 3)+num_shocks(:, 4))./(total_time(:, 3)+total_time(:, 4))];
+% num_shocks_tot  = [num_shocks_min(:, 1)+num_shocks_min(:, 2), num_shocks_min(:, 3)+num_shocks_min(:, 4)];
 stress_ent_mean = nanmean(num_entr_tot(is_stressed, :), 1);
 cont_ent_mean   = nanmean(num_entr_tot(~is_stressed, :), 1);
 stress_shk_mean = nanmean(num_shocks_tot(is_stressed, :), 1);
@@ -69,10 +88,12 @@ for j = 1:numA
 end
 plot(plotx, cont_ent_mean, 'Color', controlcolor.*2, 'LineWidth', 3); 
 plot(plotx, stress_ent_mean, 'Color', stresscolor.*2, 'LineWidth', 3); 
-ylabel('Number of entrances')
+ylabel('Number of entrances/min')
 xlabel('Session')
-axis([d1 d2 -10 125])
-set(gca, 'XTick', plotx, 'YTick', [0:20:100])
+% axis([d1 d2 -10 125])
+axis([d1 d2 -1 5])
+% set(gca, 'XTick', plotx, 'YTick', [0:20:100])
+set(gca, 'XTick', plotx, 'YTick', [0:1:5], 'XTickLabel', {'pre' 'post'})
 
 subplot(122); hold on
 title('# of Shocks')
@@ -86,10 +107,12 @@ for j = 1:numA
 end
 plot(plotx, cont_shk_mean, 'Color', controlcolor.*2, 'LineWidth', 3); 
 plot(plotx, stress_shk_mean, 'Color', stresscolor.*2, 'LineWidth', 3); 
-axis([d1 d2 -10 280])
-ylabel('Number of shocks')
+% axis([d1 d2 -10 280])
+axis([d1 d2 -1 10])
+ylabel('Number of shocks/min')
 xlabel('Session')
-set(gca, 'XTick', plotx, 'YTick', [0:50:250])
+% set(gca, 'XTick', plotx, 'YTick', [0:50:250])
+set(gca, 'XTick', plotx, 'YTick', [0:2:10], 'XTickLabel', {'pre' 'post'})
 %%
 names = {'animal', 'stressed', 'Day1Entr', 'Day3Entr', 'Day1Shk', 'Day3Shk'};
 T = table(animals', is_stressed', num_entr_tot(:,1), num_entr_tot(:,2), num_shocks_tot(:,1), num_shocks_tot(:,2), 'VariableNames', names(:));

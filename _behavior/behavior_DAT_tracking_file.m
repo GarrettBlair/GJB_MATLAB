@@ -1,30 +1,6 @@
 function [ms, room, arena, params_sub] = behavior_DAT_tracking_file(ms, room_tracking_fname, arena_tracking_fname, params)
 if isempty(params)
-params.arena_radius             = 40; % in cm
-params.arena_center             = [ 127.5, 127.5]; % pixel center of behav cam, [x,y]
-params.pixpercm                 = 3.1220; % pixel radius of behav cam env
-params.behav_fps                = 30;
-params.behav_smoothing_interval = .25; % in seconds, length of smoothing kernel
-
-params.pos_bins                 = [-45, -36:4:36, 45]; % in cm, x and y
-params.yaw_bin                  = -pi:pi/8:pi;
-params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
-params.pfield_kernel_radius     = 3; % kernel ends up being [n*2 + 1] in bins
-params.smin_vals                = -50:5:-10; % smin values used to create the 'deconv_sweep.mat'
-% params.speed_thresh             = 5; % speed thresh in cm/sec
-params.num_partitions           = 2;
-% params.max_spd_thresh           = 100;
-% params.min_spd_thresh           = 5;
-params.max_spd_thresh           = 100;
-params.min_spd_thresh           = 0;
-params.min_samples              = 10;
-params.ipos_int_time             = .25;%.2; % seconds, binning time for computing momentary spatial information
-
-% params.rotate_behav             = true;
-params.nan_interp               = true;
-params.remove_bad_caiman_segs   = false;
-params.correct_dt               = true; % correct for large jumps in timestamp file when constructing vmap
-params.plotting                 = false;
+APA_rat_imaging_params_current
 end
 
 params_sub = params;
@@ -47,6 +23,23 @@ if abs( ms.timestamps(end) - room.timestamps(end) )> 1000  || abs( ms.timestamps
         ms.ori              = ms.ori(1:diff_ts, :);
         ms.warnings.TrackerCrash = ...
             sprintf('Tracker crashed before ms software ended, timestamps cuttof at %d index', diff_ts);
+    elseif ms.timestamps(end) < room.timestamps(end)
+        diff_ts = find(room.timestamps > ms.timestamps(end), 1)-1;
+        fprintf('~~~MS software ended before TRACKER software ended, \n\t .dat timestamps cuttof at %d index\n', diff_ts);
+        fields = fieldnames(room);
+        length2cut = length(room.timestamps);
+        for jj = 1:length(fields)
+            temp = eval(sprintf('room.%s;', fields{jj}));
+            temp_info = whos('temp');
+            if any(temp_info.size == length2cut) && ~strcmp(temp_info.class, 'char')
+                temp = temp(1:diff_ts);
+                eval(sprintf('room.%s = temp;', fields{jj}));
+            end
+        end
+        room.entrance_start_idx = room.entrance_start_idx(room.entrance_start_idx<= length(room.timestamps));
+        room.shock_start_idx    = room.shock_start_idx(room.shock_start_idx<= length(room.timestamps));
+        ms.warnings.TrackerTS_diffs = ...
+            sprintf('MS software ended before TRACKER software ended, .dat timestamps cuttof at %d index', diff_ts);
     else
         error('Uknown solution')
     end
@@ -58,6 +51,10 @@ ms.arena.x = interp1(arena.timestamps, arena.x, ms.timestamps, 'linear', 'extrap
 ms.arena.y = interp1(arena.timestamps, arena.y, ms.timestamps, 'linear', 'extrap');
 ms.room.speed   = interp1(room.timestamps, room.speed, ms.timestamps, 'linear', 'extrap');
 ms.arena.speed  = interp1(arena.timestamps, arena.speed, ms.timestamps, 'linear', 'extrap');
+if isfield(room, 'Angle')
+ms.room.headangle   = interp1(room.timestamps, room.Angle, ms.timestamps, 'linear', 'extrap');
+ms.arena.headangle  = interp1(arena.timestamps, arena.Angle, ms.timestamps, 'linear', 'extrap');
+end
 
 % Extract the shock times, entrances, and approaches
 ms.room.entranceTimes = room.timestamps(room.entrance_start_idx);
@@ -78,40 +75,30 @@ ms.is_moving = is_moving;
 
 
 if params_sub.plotting
-    figure(3); clf;
+    figure; clf;
     subplot(2,2,1)
     hold on;
-    scatter3(behav.arena_x, behav.arena_y, ts, 1, 'k.')
-    scatter3(behav.x, behav.y, ts, 1, 'b.')
-    title('Extracted')
-    set(gca, 'View', [-60 60])
+%     scatter3(room.x, room.y, room.timestamps./1000, 1, 'k.')
+%     scatter3(ms.room.x, ms.room.y, ms.timestamps./1000, 1, 'r.')
+    plot(ms.room.x, ms.room.y, 'r-')
+    title('Extracted Room')
+%     set(gca, 'View', [-50 50])
     axis square
     
     subplot(2,2,2)
     hold on;
-    plot3(ax, ay, ts, 'k-')
-    plot3(x, y, ts, 'b-')
-    title('Interp & Scaled')
-    set(gca, 'View', [-60 60])
+%     scatter3(arena.x, arena.y, arena.timestamps./1000, 1, 'k.')
+    plot(ms.arena.x, ms.arena.y, 'b-')
+    title('Extracted Arena')
+%     set(gca, 'View', [-50 50])
     axis square
     
-    subplot(2,2,3)
+    subplot(2,2,3:4)
     hold on;
-    plot3(x, y, ts, 'b-')
-    plot3(xx, yy, ts, 'r-')
-    title('Room (b) vs. Arena (r)')
-    set(gca, 'View', [-60 60])
-    axis square
+    plot(ms.timestamps./1000, ms.arena.speed, 'k', 'LineWidth', 2)
     
-    subplot(4,2,6)
-    % hold on;
-    plot(ts, behav.spd_roomframe, 'b-')
-    title('Room speed (b)')
-    axis tight
-    subplot(4,2,8)
-    plot(ts, behav.spd_arenaframe, 'r-')
-    title('Arena speed (r)')
-    % set(gca, 'View', [-60 60])
+    plot(ms.timestamps(ms.is_moving)./1000, ms.arena.speed_smooth(ms.is_moving), 'g.')
+    title('Arena Speed')
     axis tight
 end
 end

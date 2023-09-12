@@ -1,168 +1,135 @@
 function [ms] = APA_generate_placemaps(ms, params)
-caimanFilename = sprintf('%s/MiniLFOV/caiman_cnmfe_out.mat', ms.parentDir);
-sminSweepFilename = sprintf('%s/MiniLFOV/deconv_sweep.mat', ms.parentDir);
-caiman_data = load(caimanFilename);
 
-%% Cull contours
-% correct for python indexing start at 0
-% caiman_data.idx_components_bad = caiman_data.idx_components_bad+1;
-% caiman_data.idx_components = caiman_data.idx_components+1;
-[nsegs,nframes] = size(caiman_data.C);
+spks = ms.spks; %normalize_rows(ms.neuron.S_matw);
 
-
-
-[smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
-    all_good_idx = find(sum(good_idx,1)>0);
-    bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
-    caiman_data.good_idx_smat = good_idx;
-    caiman_data.idx_components = all_good_idx;
-    caiman_data.idx_components_bad = bad_idx;
-
-temp = sum(smat, 1);
-caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
-temp = sum(smat_weighted, 1);
-caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
-
-if length(ms.timestamps) ~= nframes || length(ms.frameNum) ~= nframes
-    warning('!~!~! Frame number discrepancy found between ms and caiman files!')
-    disp([ms.fileName])
-    last_ts = length(ms.timestamps);
-    if last_ts < nframes && isfield(ms.warnings, 'TrackerCrash')
-        disp([ms.warnings.TrackerCrash])
-        fprintf('~~~Tracker crashed,\n\tconcatenating caiman_data at %d index\n', last_ts);
-        caiman_data.C               = caiman_data.C(:, 1:last_ts);
-        caiman_data.S               = caiman_data.S(:, 1:last_ts);
-        caiman_data.YrA             = caiman_data.YrA(:, 1:last_ts);
-        caiman_data.mc_xshifts      = caiman_data.mc_xshifts(1:last_ts,:);
-        caiman_data.mc_yshifts      = caiman_data.mc_yshifts(1:last_ts,:);
-        caiman_data.dataIso         = caiman_data.dataIso(1:last_ts, :);
-        caiman_data.S_mat           = caiman_data.S_mat(:, 1:last_ts);
-        caiman_data.S_matw          = caiman_data.S_matw(:, 1:last_ts);
-    else
-        error('Uknown solution')
-    end
-end
-%% Cropping contours manually if needed
-if ~isempty(params.reuse_contour_crop)
-    tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
-%     tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, params.reuse_contour_crop);
-    load(tempCropName, 'valid_contour_bounds');
-    if exist('valid_contour_bounds', 'var')
-        draw_bounds = false;
-        nsegs = size(caiman_data.C,1);
-        good_flag = true(nsegs,1);
-        for j = 1:nsegs
-            a = (reshape(caiman_data.A(:,j), [caiman_data.dims]))>0;
-            [yy, xx] = ind2sub(size(a), find(a));
-            isgood = inpolygon(xx, yy, valid_contour_bounds.x, valid_contour_bounds.y);
-            prop_in_poly = sum(isgood)/length(isgood);
-            if prop_in_poly < .5
-                good_flag(j) = false;
-            end
-        end
-        bad_inds = find(~good_flag);
-        allbad = unique([caiman_data.idx_components_bad, bad_inds']);
-
-    else
-        draw_bounds = true;
-    end
-else
-    tempCropName = sprintf('%s/MiniLFOV/%s', ms.parentDir, 'bounding_box.mat');
-    draw_bounds = true;
-end
-if draw_bounds
-    [~, bad_inds, ~, valid_contour_bounds] = Draw_contour_bounding(caiman_data.fullA, ...
-        caiman_data.dims, caiman_data.maxFrame, caiman_data.idx_components, params.skip_contour_bounding);
-    save(tempCropName, 'valid_contour_bounds')
-    allbad = unique([caiman_data.idx_components_bad, bad_inds']);
-end
-
-if params.remove_bad_caiman_segs
-    fprintf('\nRemoving %d bad components\n', length(allbad))
-    neuron = remove_segments(caiman_data, allbad, false);
-else
-    neuron = caiman_data;
-end
-
-ms.neuron = neuron;
-ms.valid_contour_bounds = valid_contour_bounds;
-spks = normalize_rows(ms.neuron.S_matw);
 % temp_ts = cat(1, ms.timestamps, ms.timestamps(end))./1000;
 % dt = abs(diff(temp_ts));
 if isfield(ms, 'arena')
 [~, speed_epochs] = get_speed_epochs(ms.arena.speed_smooth, params);
 
+[nsegs, nframes] = size(ms.neuron.C);
 
 ms.speed_epochs = speed_epochs;
 is_moving       = speed_epochs;
+ms.is_moving       = speed_epochs;
 ms.head_ori     = [];
 [ms.room]       = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
 [ms.arena]      = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
+
+full_splits = NaN(nframes,1);
+full_splits(find(is_moving)) = ms.room.pfield_split_vec;
+full_splits(find(~is_moving)) = uint8(interp1(find(is_moving), double(ms.room.pfield_split_vec), find(~is_moving), 'nearest'));
+ms.room.split_vec = full_splits;
+ms.arena.split_vec = full_splits;
+
+[ms.room.pfield_decode]  = pfield_split_bayesian_decoding(ms, ms.room.x,  ms.room.y,  spks, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode);
+[ms.arena.pfield_decode] = pfield_split_bayesian_decoding(ms, ms.arena.x, ms.arena.y, spks, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode);
+
+
 [ms.head_ori]   = construct_place_maps_1D(ms.head_ori,   ms.ori.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), params.yaw_bin, params);
 
-% %%
-% shock_zone_center = pi/2; % typical room shock configuration
-% shock_zone_size = pi/6; % size in rad from center to edge
-% distance_entrance_size = pi/2; % distance (between 0 to pi) to look at approaches to categorize escape vs failure
-% 
-% x = ms.room.x; y = ms.room.y; t = ms.timestamps./1000;
-% [th, rth] = cart2pol(x,y);
-% % figure(1); clf; polarhistogram(th,24);
-% 
-% d = shock_zone_center - th;
-% d = abs(mod(d + pi, 2*pi) - pi);
-% 
-% 
-% % [temp]    = construct_place_maps_1D(ms.room,   th(is_moving), ms.dt(is_moving), spks(:, is_moving), [-pi:pi/6:pi], params);
-% [temp]    = construct_place_maps_1D(ms.room,   d(is_moving), ms.dt(is_moving), spks(:, is_moving), [0:pi/32:pi], params);
-% qqq = (normalize_rows(temp.pfields_smooth));
-% [~, mp] = max(qqq, [], 2);
-% [~, ord] = sort(mp);
-% qqq = qqq(ord,:);
-% 
-% s = ms.room.shockTimes;
-% shockVec = false(length(ms.timestamps),1);
-% e = ms.room.entranceTimes;
-% entrVec = false(length(ms.timestamps),1);
-% for i = 1:length(s)
-%     ind = find(min(abs(ms.timestamps - s(i))) == abs(ms.timestamps - s(i)));
-%     shockVec(ind) = true;
-% end
-% for i = 1:length(e)
-%     ind = find(min(abs(ms.timestamps - e(i))) == abs(ms.timestamps - e(i)));
-%     entrVec(ind) = true;
-% end
-% peth_mean = zeros(size(spks,1), 2*22*2 + 1);
-% for i = 1:size(spks,1)
-% [peth_mean(i,:)] = gb_PETH(spks(i,:), entrVec, 22*2, 22*2);
-% % [peth_mean(i,:)] = gb_PETH(spks(i,:), shockVec, 22*2, 22*2);
-% end
-% [~, mp] = max(peth_mean, [], 2);
-% [~, ord] = sort(mp);
-% peth_mean = peth_mean(ord,:);
+[ms.arena.pcell_stats] = place_cell_stats(spks, ms.arena.pfields_smooth, ms.arena.spkmap_smooth, ms.arena.vmap);
+[ms.room.pcell_stats]  = place_cell_stats(spks, ms.room.pfields_smooth,  ms.room.spkmap_smooth,  ms.room.vmap);
 
-% theta spike maps and distance maps, also PETH of shocks
-%%
-%     imagesc(ms.ori.pfields_smooth)
 
-% figure(9); clf; hold on
-% spks = normalize_rows(ms.neuron.C);
-% spks2 = normalize_rows(ms.neuron.S);
-% scale = .8;
-% for i = 1:size(spks,1)
-%     s = spks2(i,:)*scale;
-%     plot(s + i - 1, 'k')
-%     s = spks(i,:)*scale;
-%     plot(s + i - 1, 'r')
-% end
-[ms.arena.pcell_stats] = place_cell_stats(spks, ms.arena.pfields, ms.arena.spkmap, ms.arena.vmap);
-[ms.room.pcell_stats] = place_cell_stats(spks, ms.room.pfields,  ms.room.spkmap,  ms.room.vmap);
+if isfield(params, 'num_random_shuffle_pcell')
+    nrand = params.num_random_shuffle_pcell;
+    ms.arena.pcell_stats.infoPerSpike_rand = NaN(nsegs, nrand);
+    ms.arena.pcell_stats.sparsity_rand     = NaN(nsegs, nrand);
+    ms.arena.pcell_stats.splitcorr_rand    = NaN(nsegs, nrand);
+    ms.room.pcell_stats.infoPerSpike_rand  = NaN(nsegs, nrand);
+    ms.room.pcell_stats.sparsity_rand      = NaN(nsegs, nrand);
+    ms.room.pcell_stats.splitcorr_rand     = NaN(nsegs, nrand);
+    a_infoPerSpike_rand = NaN(nsegs, nrand);
+    a_sparsity_rand     = NaN(nsegs, nrand);
+    a_coh_rand          = NaN(nsegs, nrand);
+    a_corr_rand         = NaN(nsegs, nrand);
+    r_infoPerSpike_rand = NaN(nsegs, nrand);
+    r_sparsity_rand     = NaN(nsegs, nrand);
+    r_coh_rand          = NaN(nsegs, nrand);
+    r_corr_rand         = NaN(nsegs, nrand);
+    
+    fprintf('\t\tPeforming %d shuffles for mutual info, sparsity, & split corr... ', nrand)
+    
+    roomxm = ms.room.x(is_moving);    roomym = ms.room.y(is_moving);
+    arenaxm = ms.arena.x(is_moving);  arenaym = ms.arena.y(is_moving);
+    dt = ms.dt(is_moving);
+    
+    minshift = floor(length(roomxm)*.1);
+    maxshift = floor(length(roomxm)*.9);
+    shiftval = randi([minshift maxshift], nrand, 4);
+    randdir = 1*(rand(nrand, 4)>=.5);
+    randdir(randdir==0) = -1;
+    shiftval = shiftval.*randdir;
+    spks_mov = spks(:, is_moving);
+    pos_bins = params.pos_bins;
+    h = tic;
+    reps = linspace(0, nrand, 11);
+    parfor_progbar = params.parfor_progbar;
+    ppm = 0;
+    if parfor_progbar == true
+        ppm = ParforProgressbar(nrand,'parpool', {'local'}, 'showWorkerProgress',true,...
+            'progressBarUpdatePeriod',5,'title','Pfield info randLoop');
+    end
+    parfor randLoop = 1:nrand
+        rx = circshift(roomxm,  shiftval(randLoop,1));
+        ry = circshift(roomym,  shiftval(randLoop,2));
+        ax = circshift(arenaxm, shiftval(randLoop,3));
+        ay = circshift(arenaym, shiftval(randLoop,4));
+        room_temp = [];
+        arena_temp = [];
+        [room_temp]                         = construct_place_maps_2D(room_temp,  rx,  ry,  dt, spks_mov, pos_bins, params);
+        [room_rand_pcell_stats]             = place_cell_stats(spks, room_temp.pfields_smooth,  room_temp.spkmap_smooth,  room_temp.vmap);
+        r_infoPerSpike_rand(:, randLoop)    = room_rand_pcell_stats.infoPerSpike;
+        r_sparsity_rand(:, randLoop)        = room_rand_pcell_stats.sparsity;
+        r_coh_rand(:, randLoop)             = room_rand_pcell_stats.coherence;
+        r_corr_rand(:, randLoop)            = room_temp.split_corr;
+        
+        [arena_temp]                        = construct_place_maps_2D(arena_temp, ax,  ay,  dt, spks_mov, pos_bins, params);
+        [arena_rand_pcell_stats]            = place_cell_stats(spks, arena_temp.pfields_smooth, arena_temp.spkmap_smooth, arena_temp.vmap);
+        a_infoPerSpike_rand(:, randLoop)    = arena_rand_pcell_stats.infoPerSpike;
+        a_sparsity_rand(:, randLoop)        = arena_rand_pcell_stats.sparsity;
+        a_coh_rand(:, randLoop)             = arena_rand_pcell_stats.coherence;
+        a_corr_rand(:, randLoop)            = arena_temp.split_corr;
+        if parfor_progbar == true
+            pause(.001)
+            ppm.increment();
+        end
+    end
+    fprintf(' Done! %.2f seconds\n', toc(h))
+    ms.arena.pcell_stats.infoPerSpike_rand = a_infoPerSpike_rand;
+    ms.room.pcell_stats.infoPerSpike_rand  = r_infoPerSpike_rand;
+    ms.arena.pcell_stats.sparsity_rand = a_sparsity_rand;
+    ms.room.pcell_stats.sparsity_rand  = r_sparsity_rand;
+    ms.arena.pcell_stats.coherence_rand = a_coh_rand;
+    ms.room.pcell_stats.coherence_rand  = r_coh_rand;
+    ms.arena.pcell_stats.splitcorr_rand = a_corr_rand;
+    ms.room.pcell_stats.splitcorr_rand  = r_corr_rand;
+    
+    temp = ms.arena.pcell_stats.infoPerSpike*ones(1, nrand);
+    ms.arena.pcell_stats.infoProb = sum(temp<ms.arena.pcell_stats.infoPerSpike_rand, 2)./nrand;
+    temp = ms.arena.pcell_stats.sparsity*ones(1, nrand);
+    ms.arena.pcell_stats.sparsityProb = sum(temp<ms.arena.pcell_stats.sparsity_rand, 2)./nrand;
+    temp = ms.arena.split_corr*ones(1, nrand);
+    ms.arena.pcell_stats.splitcorrProb = sum(temp<ms.arena.pcell_stats.splitcorr_rand, 2)./nrand;
+    temp = ms.arena.pcell_stats.coherence*ones(1, nrand);
+    ms.arena.pcell_stats.coherenceProb = sum(temp<ms.arena.pcell_stats.coherence_rand, 2)./nrand;
+    
+    temp = ms.room.pcell_stats.infoPerSpike*ones(1, nrand);
+    ms.room.pcell_stats.infoProb = sum(temp<ms.room.pcell_stats.infoPerSpike_rand, 2)./nrand;
+    temp = ms.room.pcell_stats.sparsity*ones(1, nrand);
+    ms.room.pcell_stats.sparsityProb = sum(temp<ms.room.pcell_stats.sparsity_rand, 2)./nrand;
+    temp = ms.room.split_corr*ones(1, nrand);
+    ms.room.pcell_stats.splitcorrProb = sum(temp<ms.room.pcell_stats.splitcorr_rand, 2)./nrand;
+    temp = ms.room.pcell_stats.coherence*ones(1, nrand);
+    ms.room.pcell_stats.coherenceProb = sum(temp<ms.room.pcell_stats.coherence_rand, 2)./nrand;
+end
 
 %% seting up optimal density subplot
 
 ms.arena.pfield_alpha = ~isnan(ms.arena.vmap);
 ms.room.pfield_alpha = ~isnan(ms.room.vmap);
-if params.plotting
+if false % params.plotting
     nsegs = size(spks,1);
     ss = get(0,'screensize');
     ar = mean([1, ss(3)/ss(4)])-1;
@@ -170,29 +137,34 @@ if params.plotting
     nc = round(n*(1-ar))+1;
     nr = round(n*(1+ar));
     
-    figure(10); clf;
-    set(gcf, 'Name', 'ARENA FRAME')
-    colormap(plasma)
-    figure(11); clf
-    set(gcf, 'Name', 'ROOM FRAME')
-    colormap(viridis)
-    figure(10);
-    for i = 1:nsegs
-        subplot_tight(nc, nr, i, [.01 .01])
-        p = squeeze(ms.arena.pfields_smooth(i,:,:));
+%     figure(10); clf;
+%     set(gcf, 'Name', 'ARENA FRAME')
+%     colormap(plasma)
+%     figure(11); clf
+%     set(gcf, 'Name', 'ROOM FRAME')
+    nfigs = ceil(nsegs/400);
+    for figloop=1:nfigs
+    subsegs = 400*(figloop-1)+1:400*(figloop);
+    subsegs = subsegs(subsegs<=nsegs);
+    for i = 1:length(subsegs)
+    figure(10+figloop);
+        subplot_tight(20, 20, i, [.01 .01])
+        p = squeeze(ms.arena.pfields_smooth(subsegs(i),:,:));
         %     p = squeeze(ms.arena.pfields(i,:,:));
-        p = p./max(p(:));
+        pr = p./max(p(:));
         imagesc(p, 'AlphaData', ms.arena.pfield_alpha);
         axis square off
-    end
-    figure(11);
-    for i = 1:nsegs
-        subplot_tight(nc, nr, i, [.01 .01])
-        p = squeeze(ms.room.pfields_smooth(i,:,:));
+%     end
+%     for i = 1:nsegs
+    figure(100+figloop);
+        subplot_tight(20, 20, i, [.01 .01])
+        p = squeeze(ms.room.pfields_smooth(subsegs(i),:,:));
         %     p = squeeze(ms.room.pfields(i,:,:));
-        p = p./max(p(:));
-        imagesc(p, 'AlphaData', ms.room.pfield_alpha);
+        pa = p./max(p(:));
+        imagesc([pr pa], 'AlphaData', [ ms.room.pfield_alpha  ms.arena.pfield_alpha]);
         axis square off
+    end
+    colormap(viridis)
     end
 end
 else

@@ -58,7 +58,7 @@ fprintf('\n~~~~~\n');
 %% ARRANGING, SEGMENTING, and SAVING BEHAVIOR
 Efects.shortrate_pre10 = NaN(max(exp.animalidx), max(exp.sessnum));
 Efects.shortlap_prop = NaN(max(exp.animalidx), max(exp.sessnum));
-figure(205); clf
+% figure(205); clf
 for fileLoop = 1:length(exp.files)
     %%
     behav = [];
@@ -99,20 +99,29 @@ for fileLoop = 1:length(exp.files)
     pre10_sl = [];
     pre10_lr = [];
     pre10_ll = [];
+    pre10_sr_spd = [];
+    pre10_sl_spd = [];
+    pre10_lr_spd = [];
+    pre10_ll_spd = [];
     if ~isnan(behav.SR.pass_ind(1))
     pre10_sr = behav.time(behav.SR.pass_ind(:,2))<=600;
+    pre10_sr_spd = behav.SR.mean_spd(  behav.time(behav.SR.pass_ind(:,2))<=600 );
     end
     if ~isnan(behav.SL.pass_ind(1))
     pre10_sl = behav.time(behav.SL.pass_ind(:,2))<=600;
+    pre10_sl_spd = behav.SL.mean_spd(  behav.time(behav.SL.pass_ind(:,2))<=600 );
     end
     if ~isnan(behav.LR.pass_ind(1))
     pre10_lr = behav.time(behav.LR.pass_ind(:,2))<=600;
+    pre10_lr_spd = behav.LR.mean_spd(  behav.time(behav.LR.pass_ind(:,2))<=600 );
     end
     if ~isnan(behav.LL.pass_ind(1))
     pre10_ll = behav.time(behav.LL.pass_ind(:,2))<=600;
+    pre10_ll_spd = behav.LL.mean_spd(  behav.time(behav.LL.pass_ind(:,2))<=600 );
     end
     
     behav.numshort = length(pre10_sr) + length(pre10_sl);
+    behav.medianshortspeed_pre10 = nanmedian([pre10_sr_spd; pre10_sl_spd])
     behav.shortrate_pre10 = (sum(pre10_sr) + sum(pre10_sl))/10; % 10 mins
     behav.shortrate_post10 = (sum(~pre10_sr) + sum(~pre10_sl))/5; % last 5 min
 
@@ -159,9 +168,16 @@ end
 
 shock_sess_diff = [-2:2];%-2:2; %-1:1;%
 shortrate_scopo = NaN( A_num, length(shock_sess_diff) );
+shortspd_scopo = NaN( A_num, length(shock_sess_diff) );
 shortprop_scopo = NaN( A_num, length(shock_sess_diff) );
 shortrate_saline = NaN( A_num, length(shock_sess_diff) );
+shortspd_saline = NaN( A_num, length(shock_sess_diff) );
 shortprop_saline = NaN( A_num, length(shock_sess_diff) );
+
+shortrate_scopo_postshock = NaN( A_num, length(shock_sess_diff) );
+shortprop_scopo_postshock = NaN( A_num, length(shock_sess_diff) );
+shortrate_saline_postshock = NaN( A_num, length(shock_sess_diff) );
+shortprop_saline_postshock = NaN( A_num, length(shock_sess_diff) );
 % shock_sess_diff = NaN( A_num, length(shock_sess_diff) );
 
 for aLoop = 1:A_num
@@ -179,16 +195,28 @@ for aLoop = 1:A_num
                 behav = [];
                 load(fname, 'behav');
                 r = behav.shortrate_pre10;
+                s = behav.medianshortspeed_pre10;
                 p = behav.shortrate_pre10/(behav.longrate_pre10+behav.shortrate_pre10);
+                t = behav.shortrate_post10;
+                g = behav.shortrate_post10/(behav.longrate_post10+behav.shortrate_post10);
                 if scopo_first(aLoop)==1 && shockLoop==1
                     shortrate_scopo(aLoop, sessLoop) = r;
+                    shortspd_scopo(aLoop, sessLoop) = s;
                     shortprop_scopo(aLoop, sessLoop) = p;                    
+                    shortrate_scopo_postshock(aLoop, sessLoop) = t;
+                    shortprop_scopo_postshock(aLoop, sessLoop) = g;                    
                 elseif scopo_first(aLoop)==0 && shockLoop==2
                     shortrate_scopo(aLoop, sessLoop) = r;
+                    shortspd_scopo(aLoop, sessLoop) = s;
                     shortprop_scopo(aLoop, sessLoop) = p;
+                    shortrate_scopo_postshock(aLoop, sessLoop) = t;
+                    shortprop_scopo_postshock(aLoop, sessLoop) = g;
                 else
                     shortrate_saline(aLoop, sessLoop) = r;
+                    shortspd_saline(aLoop, sessLoop) = s;
                     shortprop_saline(aLoop, sessLoop) = p;
+                    shortrate_saline_postshock(aLoop, sessLoop) = t;
+                    shortprop_saline_postshock(aLoop, sessLoop) = g;
                 end
 % %                 shortrate_scopo(shockLoop, aLoop, sessLoop) = r;
 % %                 shortrate_scopo(shockLoop, aLoop, sessLoop) = p;
@@ -206,10 +234,6 @@ end
 % shock_sess_diff = nanmean(shock_sess_diff,1);
 
 
-vars2save = {'shock_sess_diff' 'Short_rate' 'Short_proportion' 'shortrate_saline' 'shortrate_scopo' 'shortprop_saline' 'shortprop_scopo'};
-% save('D:\Sample Data\Linear Maze Data\Blair2022_SuppBehavior\SummaryData_Supp.mat', vars2save{:})
-% save('C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\Experiments\LinearTrack\figs\SummaryData_Supp.mat', vars2save{:})
-%%
 % s2 = squeeze(shortrate(2,any(shock_sess>0,2),:));
 presess = shock_sess_diff==-1;
 postsess = shock_sess_diff==1;
@@ -226,7 +250,43 @@ saline_post = shortprop_saline(:, postsess);
 scopo_pre = shortprop_scopo(:, presess);
 scopo_post = shortprop_scopo(:, postsess);
 Short_proportion = table(A_names, is_female, scopo_first, saline_pre, saline_post, scopo_pre, scopo_post, 'VariableNames', var_names);
+vars2save = {'shock_sess_diff' 'Short_rate' 'Short_proportion'...
+    'shortrate_saline' 'shortrate_scopo' 'shortprop_saline' 'shortprop_scopo'...
+    'shortrate_saline_postshock' 'shortrate_scopo_postshock' 'shortprop_saline_postshock' 'shortprop_scopo_postshock'};
+save('D:\Sample Data\Linear Maze Data\Blair2022_SuppBehavior\SummaryData_Supp_postshock.mat', vars2save{:})
+% save('C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\Experiments\LinearTrack\figs\SummaryData_Supp_postshock.mat', vars2save{:})
 
+%% FROM REVIEWS 6_18_2023
+SAL_shortrate_preshock = shortrate_saline(:, shock_sess_diff==0);
+SAL_shortprop_preshock = shortprop_saline(:, shock_sess_diff==0);
+SCOP_shortrate_preshock = shortrate_scopo(:, shock_sess_diff==0);
+SCOP_shortprop_preshock = shortprop_scopo(:, shock_sess_diff==0);
+
+SAL_shortrate_postshock = shortrate_saline_postshock(:, shock_sess_diff==0);
+SAL_shortprop_postshock = shortprop_saline_postshock(:, shock_sess_diff==0);
+SCOP_shortrate_postshock = shortrate_scopo_postshock(:, shock_sess_diff==0);
+SCOP_shortprop_postshock = shortprop_scopo_postshock(:, shock_sess_diff==0);
+figure; hold on; 
+plot([SAL_shortrate_preshock SAL_shortrate_postshock]', 'k')
+plot([SCOP_shortrate_preshock SCOP_shortrate_postshock]', 'r')
+axis([0 3 -1 6])
+%%
+figure(207); clf;
+pre_trn_post_sess = [2,3,4];
+subplot(1,2,1); hold on
+bar([1,2,3], nanmean(shortspd_saline(:,pre_trn_post_sess), 1), 'FaceColor', [.5 .5 .5])
+plot(shortspd_saline(is_female,pre_trn_post_sess)', 'k:o')
+plot(shortspd_saline(~is_female,pre_trn_post_sess)', 'k-o')
+set(gca, 'XTick', [1 2 3], 'XTickLabel', {'pre' 'trn' 'post'})
+axis([0 4 0 160])
+subplot(1,2,2); hold on
+bar([1,2,3], nanmean(shortspd_scopo(:,pre_trn_post_sess), 1), 'FaceColor', [1 .5 .6])
+plot(shortspd_scopo(~is_female,pre_trn_post_sess)', 'm-o')
+plot(shortspd_scopo(is_female,pre_trn_post_sess)', 'm:o')
+set(gca, 'XTick', [1 2 3], 'XTickLabel', {'pre' 'trn' 'post'})
+axis([0 4 0 160])
+vars2save = {'shortspd_saline' 'shortspd_scopo' 'is_female'};
+save('D:\Sample Data\Linear Maze Data\Blair2022_SuppBehavior\SummaryData_Supp_runningspeed.mat', vars2save{:})
 
 %%
 A_names = Short_rate.animal_id; %%%%%%%%%%%
