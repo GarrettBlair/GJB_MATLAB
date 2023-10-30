@@ -13,8 +13,9 @@ ms.speed_epochs = speed_epochs;
 is_moving       = speed_epochs;
 ms.is_moving       = speed_epochs;
 ms.head_ori     = [];
-[ms.room]       = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
-[ms.arena]      = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params);
+
+[ms.room]       = construct_place_maps_2D(ms.room,  ms.room.x(is_moving),  ms.room.y(is_moving),  ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params.pos_bins, params);
+[ms.arena]      = construct_place_maps_2D(ms.arena, ms.arena.x(is_moving), ms.arena.y(is_moving), ms.dt(is_moving), spks(:, is_moving), params.pos_bins, params.pos_bins, params);
 
 full_splits = NaN(nframes,1);
 full_splits(find(is_moving)) = ms.room.pfield_split_vec;
@@ -78,14 +79,14 @@ if isfield(params, 'num_random_shuffle_pcell')
         ay = circshift(arenaym, shiftval(randLoop,4));
         room_temp = [];
         arena_temp = [];
-        [room_temp]                         = construct_place_maps_2D(room_temp,  rx,  ry,  dt, spks_mov, pos_bins, params);
+        [room_temp]                         = construct_place_maps_2D(room_temp,  rx,  ry,  dt, spks_mov, pos_bins, pos_bins, params);
         [room_rand_pcell_stats]             = place_cell_stats(spks, room_temp.pfields_smooth,  room_temp.spkmap_smooth,  room_temp.vmap);
         r_infoPerSpike_rand(:, randLoop)    = room_rand_pcell_stats.infoPerSpike;
         r_sparsity_rand(:, randLoop)        = room_rand_pcell_stats.sparsity;
         r_coh_rand(:, randLoop)             = room_rand_pcell_stats.coherence;
         r_corr_rand(:, randLoop)            = room_temp.split_corr;
         
-        [arena_temp]                        = construct_place_maps_2D(arena_temp, ax,  ay,  dt, spks_mov, pos_bins, params);
+        [arena_temp]                        = construct_place_maps_2D(arena_temp, ax,  ay,  dt, spks_mov, pos_bins, pos_bins, params);
         [arena_rand_pcell_stats]            = place_cell_stats(spks, arena_temp.pfields_smooth, arena_temp.spkmap_smooth, arena_temp.vmap);
         a_infoPerSpike_rand(:, randLoop)    = arena_rand_pcell_stats.infoPerSpike;
         a_sparsity_rand(:, randLoop)        = arena_rand_pcell_stats.sparsity;

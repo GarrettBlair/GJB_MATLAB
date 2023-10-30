@@ -1,358 +1,408 @@
+clear; close all;
 fr = 30;
 bin_timeres = .25;
 samplesPerBin = fr*bin_timeres;
 segs_range = 2.^[0:11];
-sample_range = round(samplesPerBin*50*2.^[0:7] + 2*samplesPerBin) ;
+sample_range = round(samplesPerBin*50*2.^[1:9] + 2*samplesPerBin) ;
+nsamples_binned = (sample_range./(fr*bin_timeres))-2;
+nsamples_time = nsamples_binned*bin_timeres;
 swap_range = round(100*[0, .01, .05, .1, .2, .3, .4, .5, .6, .7, .8, .9, .95, .99, 1]);
 seg_mod_range = round(100*[0, .01, .05, .1, .2, .3, .4, .5, .6, .7, .8, .9, .95, .99, 1]);
-randLoops = 1:10;
-topdir = 'D:\Sample Data\ensemble_ipos_cosine';
-%%
-ddir = [topdir '\prop_mod\'];
+
+isomap_segrange = 2.^[0:8];
+randLoops = 1%:10;
+
+stand_prop = swap_range(end-3);
+stand_ncells = segs_range(end-3);%nsegs(end-2);
+stand_nsamples = sample_range(end-3);
+stand_binsamples = nsamples_binned(end-3);
+stand_prop_cells = seg_mod_range(end-3);
+
+max_len = max([size(seg_mod_range,2), size(swap_range,2), size(sample_range,2), size(segs_range,2)]);
+% topdir = 'D:\Sample Data\ensemble_prob_median';
+topdir = 'D:\Sample Data\ensemble_prob_linear';
+% model_fitting_test;
+% topdir = 'D:\Sample Data\ensemble_prob';
+%
 props = swap_range;
-props_min = abs(swap_range - 50) + 50;
 nrand = length(randLoops);
-props_e_mod = NaN(length(props),nrand);
-props_i_mod = NaN(length(props),nrand);
-props_sd_mod = NaN(length(props),nrand);
-props_iso_mod = NaN(length(props),nrand);
-props_e_signal = NaN(length(props),nrand);
-props_i_signal = NaN(length(props),nrand);
-for i = 1:length(props)
-%                 figure(i); clf;
-    for j = randLoops
-    %%
-        fn = sprintf('%sipos_prop%d_%d.mat', ddir, props(i), j-1);
-        if isfile(fn)
-            temp = load(fn);
-            [i_val, e_val, sd_val, iso_val, ns] = i_e_powermod(temp);
-            props_e_mod(i,j) = e_val; %nansum(abs(e(s==smin)))/nansum(abs(e));
-            props_i_mod(i,j) = i_val;%nansum(abs(ipos(s==smin)))/nansum(abs(ipos));
-            props_sd_mod(i,j) = sd_val;%nansum(abs(ipos(s==smin)))/nansum(abs(ipos));
-            props_iso_mod(i,j) = iso_val;%nansum(abs(ipos(s==smin)))/nansum(abs(ipos));
-            e1 = temp.ensem1;
-            e2 = temp.ensem2;
-            sd1 = temp.sd1;
-            sd2 = temp.sd2;
-            e = (e1-e2);
-            i1 = nanmean(abs(temp.ipos1), 1);
-            i2 = nanmean(abs(temp.ipos2), 1);
-            ipos = nanmean(abs(temp.ipos1) - abs(temp.ipos2), 1);
-            s = temp.switch_binned;
-            [so, ord] = sort(s, 'ascend');
 
-            if j==1 && i==6
-            sd = 2.^(temp.sd2);
-            figure(100+i); clf;
-            subplot(4,2,3)
-            plot(e, 'b')
-            subplot(4,2,5)
-            plot(ipos, 'k')
-            subplot(4,2,7)
-            plot(sd, 'r')
-            subplot(4,2,1)
-            imagesc(temp.bin_spks1, [0 2])
-            subplot(122)
-            scatter(ipos,sd)
-            [h,p] = corr(ipos',sd');
-            
-            axis equal
-            drawnow
-            end
-            
-            if j==1
-                d = temp.isoMap;
-                d = normalize_cols(d);
-                figure(i+1000); clf; 
-                subplot(4,1,1)
-                plot(temp.ensem1-temp.ensem2, 'b')
-                title(props(i))
-                subplot(4,1,2:4)
-                hold on
-                plot(d(:,1), 'k')
-                plot(d(:,2)+1, 'k')
-                plot(d(:,3)+2, 'k')
-            end
-        end
-    end
-end
-drawnow
+nantemplate = NaN(max_len, nrand);
+temp = [];
+temp.ensemMod       = nantemplate;
+temp.iposMod        = nantemplate;
+temp.spatialDistMod = nantemplate;
+temp.IsoMapDist     = nantemplate;
+temp.spkDist        = nantemplate;
+temp.xval           = NaN(max_len, 1);
+ncells      = temp;
+nsamples    = temp;
+prop_cells  = temp;
+prop_samples= temp;
+stand_comp  = temp;
+isomap_dims = temp;
+isomap_dims.iso_ensemMod        = nantemplate;
+isomap_dims.iso_iposMod         = nantemplate;
+isomap_dims.iso_spatialDistMod  = nantemplate;
+temp = [];
+%%
+nrand = 1;
+plotting = false;
+ncells = eval_data_conjointipos(ncells, [topdir '\ncells\'], segs_range, nrand, plotting);
+nsamples = eval_data_conjointipos(nsamples, [topdir '\nsamples\'], sample_range, nrand, plotting);
+prop_cells = eval_data_conjointipos(prop_cells, [topdir '\prop_cells\'], seg_mod_range, nrand, plotting);
+prop_samples = eval_data_conjointipos(prop_samples, [topdir '\prop_samples\'], swap_range, nrand, plotting);
+
+isomap_dims = eval_data_conjointipos(isomap_dims, [topdir '\isomap_ncells\'], isomap_segrange, nrand, plotting);
+%%
+stand_range = {'256_0', '256_1' '256_2'};
+stand_comp = eval_data_conjointipos(stand_comp, [topdir '\standard\'], stand_range, 1:3, plotting);
+
+
 
 %%
-ddir = [topdir '\shuffling\'];
-isodims = [1 3 5 10 30 60];
-nrand = 1;%length(randLoops);
-shuff_e_mod = NaN(length(isodims),nrand);
-shuff_i_mod = NaN(length(isodims),nrand);
-figure(5001); clf; 
-for i = 1:length(isodims)
-%                 figure(i); clf;
-    for j = randLoops
-    %%
-        fn = sprintf('%sshuffiso%d_%d.mat', ddir, isodims(i), j-1);
-        if isfile(fn)
-            temp = load(fn);
-%             [i_val, e_val, sd_val, iso_val, ns] = i_e_powermod(temp);
-%             props_e_mod(i,j) = e_val; %nansum(abs(e(s==smin)))/nansum(abs(e));
-%             props_i_mod(i,j) = i_val;%nansum(abs(ipos(s==smin)))/nansum(abs(ipos));
-%             props_sd_mod(i,j) = sd_val;%nansum(abs(ipos(s==smin)))/nansum(abs(ipos));
-            
-            if j==3
-                e = normalize_rows(temp.ensem1);
-                s = normalize_rows(temp.switch_binned);
-                d = temp.isoMap;
-                d = normalize_cols(d);
-%                 figure(i+1000); clf; 
-                figure(5001); %clf; 
-                subplot(2,1,1); hold on 
-                sep = i*2;
-                plot(s+sep, 'k')
-                plot(e+sep)
-                title(isodims(i))
-                subplot(2,1,2)
-                hold on
-                size(d)
-%                 stacked_traces(d', .8)
-                plot(sep + s, 'k')
-                plot(sep + d(:,1)')
-            end
-        end
-    end
-end
-drawnow
 
-%%
-nsegs = segs_range; % [1 5 10 25 50 100 250 500];
-nsegs_e_mod = NaN(length(nsegs),nrand);
-nsegs_i_mod = NaN(length(nsegs),nrand);
-nsegs_sd_mod = NaN(length(nsegs),nrand);
-nsegs_iso_mod = NaN(length(nsegs),nrand);
-for i = 1:length(nsegs)
-    for j = randLoops
+for i = 1:0%length(stand_range)
+    fn = sprintf('%s%d_%d.mat', ddir, 256, stand_range(i)-1);
+    if isfile(fn)
         %%
-        ddir = [topdir '\segs_mod\'];
-        fn = sprintf('%sipos_nsegs%d_%d.mat', ddir, nsegs(i), j-1);
-        if isfile(fn)
-            temp = load(fn);
-            [i_val, e_val, sd_val, iso_val, ns] = i_e_powermod(temp);
-%             e1 = temp.ensem1;
-%             e2 = temp.ensem2;
-%             e = (e1-e2);
-%             i1 = nanmean(abs(temp.ipos1), 1);
-%             i2 = nanmean(abs(temp.ipos2), 1);
-%             ipos = nanmean(abs(temp.ipos1) - abs(temp.ipos2), 1);
-%             s = temp.switch_binned;
-%             nsegs_e_mod(i,j) = nansum(abs(e(s==1)))/nansum(abs(e));
-%             nsegs_i_mod(i,j) = nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            nsegs_e_mod(i,j) = e_val;
-            nsegs_i_mod(i,j) = i_val;
-            nsegs_sd_mod(i,j) = sd_val;
-            nsegs_iso_mod(i,j) = iso_val;
-            
-            if j==1
-                d = temp.isoMap;
-                d = normalize_cols(d);
-                figure(i+2000); clf; 
-                subplot(4,1,1)
-                plot(temp.ensem1-temp.ensem2, 'b')
-                title(nsegs(i))
-                subplot(4,1,2:4)
-                hold on
-                stacked_traces(d')
-%                 plot(d(:,1), 'k')
-%                 plot(d(:,2)+1, 'k')
-%                 plot(d(:,3)+2, 'k')
-            end
+        disp(fn)
+        temp = load(fn);
+        [spks_val, sd_val, ipos_val, iso_val, e_val] = i_e_powermod(temp);
+        e = temp.ensem_av1;
+        e = e-min(e); 
+        e = e./max(e)+ .001;
+        thresh_e = median(e)+2*std(e);
+%         edges_of_bins  = [-.0015:.001:.0015;
+        edges_of_bins  = [.001:.001:1];
+        [m] = gb_conjoint_ensemble_model_fitting(e, thresh_e, edges_of_bins, true);
+        m.product
+%         e_val
+        if i<11
+            stand_comp.spkDist(i,1)       = spks_val;
+            stand_comp.spatialDistMod(i,1)= sd_val;
+            stand_comp.iposMod(i,1)       = ipos_val;
+            stand_comp.IsoMapDist(i,1)    = iso_val;
+            stand_comp.ensemMod(i,1)      = e_val;
+        else
+            stand_comp.spkDist(i-10,2)       = spks_val;
+            stand_comp.spatialDistMod(i-10,2)= sd_val;
+            stand_comp.iposMod(i-10,2)       = ipos_val;
+            stand_comp.IsoMapDist(i-10,2)    = iso_val;
+            stand_comp.ensemMod(i-10,2)      = e_val;
         end
-    end
-end
-drawnow
-%%
-ddir = [topdir '\nsample_mod\'];
-nsamples = sample_range; % [50, 250, 500, 1000, 2500, 5000];
-randLoops_ns = 1:124;
-nsamples_e_mod = NaN(length(nsamples),length(randLoops_ns));
-nsamples_i_mod = NaN(length(nsamples),length(randLoops_ns));
-nsamples_sd_mod = NaN(length(nsamples),length(randLoops_ns));
-nsamples_iso_mod = NaN(length(nsamples),length(randLoops_ns));
-nsamples_binned = NaN(length(nsamples), 1);
-for i = 1:length(nsamples)
-    for j = randLoops_ns
-        fn = sprintf('%sipos_nsample%d_%d.mat', ddir, nsamples(i), j-1);
-        if isfile(fn)
-            temp = load(fn);
-            [i_val, e_val, sd_val, iso_val, ns] = i_e_powermod(temp);
-            nsamples_e_mod(i,j) = e_val;% nansum(abs(e(s==1)))/nansum(abs(e));
-            nsamples_i_mod(i,j) = i_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            nsamples_sd_mod(i,j) = sd_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            nsamples_iso_mod(i,j) = iso_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            if isnan(nsamples_binned(i,1))
-                nsamples_binned(i,1) = ns;%length(e);
-            end
-            if j==1
-                d = temp.isoMap;
-                d = normalize_cols(d);
-                figure(i+3000); clf; 
-                subplot(4,1,1)
-                plot(temp.ensem1-temp.ensem2, 'b')
-                title(nsamples(i))
-                subplot(4,1,2:4)
-                hold on
-                plot(d(:,1), 'k')
-                plot(d(:,2)+1, 'k')
-                plot(d(:,3)+2, 'k')
-            end
-        end
-    end
-end
-drawnow
-%%
-% nsamples = seg_mod_range; % [50, 250, 500, 1000, 2500, 5000];
-randLoops_ns = 1:10;
-seg_prop_e_mod = NaN(length(seg_mod_range),length(randLoops_ns));
-seg_prop_i_mod = NaN(length(seg_mod_range),length(randLoops_ns));
-seg_prop_sd_mod = NaN(length(seg_mod_range),length(randLoops_ns));
-seg_prop_iso_mod = NaN(length(seg_mod_range),length(randLoops_ns));
-for i = 1:length(seg_mod_range)
-    for j = randLoops_ns
-        %%
-        ddir = [topdir '\seg_prop_mod\'];
-        fn = sprintf('%sipos_segprop%d_%d.mat', ddir, seg_mod_range(i), j-1);
-        if isfile(fn)
-            temp = load(fn);
-            e1 = temp.ensem1;
-            e2 = temp.ensem2;
-            e = (e1-e2);
-%             plot(e2+.1*i)
-            i1 = nanmean(abs(temp.ipos1), 1);
-            i2 = nanmean(abs(temp.ipos2), 1);
-            ipos = nanmean(abs(temp.ipos1) - abs(temp.ipos2), 1);
-            sd = 2.^(temp.sd1);
-            if j==1 && i==6
-            figure(400+i); clf;
-            subplot(4,2,3)
-            plot(e, 'b')
-            subplot(4,2,5)
-            plot(ipos, 'k')
-            subplot(4,2,7)
-            plot(sd, 'r')
-            subplot(4,2,1)
-            imagesc(temp.bin_spks1, [0 1])
-            subplot(122)
-            scatter(ipos,sd)
-            [c,p] = nancorr(ipos',sd');
-            axis equal
-            end
-            if j==1
-                d = temp.isoMap;
-                d = normalize_matrix(d);
-                figure(i+4000); clf; 
-                subplot(4,1,1)
-                plot(temp.ensem1-temp.ensem2, 'b')
-                title(seg_mod_range(i))
-                subplot(4,1,2:4)
-                hold on
-                stacked_traces(d')
-            end
-%             input('')
-            [i_val, e_val, sd_val, iso_val, ~] = i_e_powermod(temp);
-            seg_prop_e_mod(i,j) = e_val;% nansum(abs(e(s==1)))/nansum(abs(e));
-            seg_prop_i_mod(i,j) = i_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            seg_prop_sd_mod(i,j) = sd_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-            seg_prop_iso_mod(i,j) = iso_val;%nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-        end
+        
     end
 end
 
 %%
-stand_prop = 70;
-stand_ncells = 512;%nsegs(end-2);
-stand_nsamples = nsamples(end-1);
-stand_prop_cells = 100;
-seg_prop = seg_mod_range;
 
-vars2plot = {'props', 'nsegs', 'nsamples', 'seg_prop'};
-% dep2plot = {'i_mod', 'sd_mod', 'e_mod'};
-dep2plot = {'i_mod', 'sd_mod', 'e_mod', 'iso_mod'};
-clrs2plot = [.2 .2 .2; .6 .2 .2; .2 .2 .8; .8 .2 .8];
+vars2plot = {'ncells', 'nsamples', 'prop_samples', 'prop_cells'};
+dep2plot = {'ensemMod', 'iposMod', 'spatialDistMod', 'spkDist' , 'IsoMapDist'};
+clrs2plot = [.2 .2 .2; plasma(6)];
+% clrs2plot = [.2 .2 .2; .6 .2 .2; .2 .2 .8; .8 .2 .8];
 stand_clr = [.8 1 .8];
-% iclr = [.2 .2 .2];
-% eclr = [.2 .2 .8];
 medge = 'none';
 msize = 10;
 figure(102); clf
-subplot(2,2, 1); hold on
-s = rectangle('Position', [(stand_prop)-2.5 -.05 5 2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
-plot([0 100], [1 0], 'k:', 'LineWidth', 1)
-gt = [props(1:4:end)];
-set(gca, 'XTick', (gt), 'XTickLabel', gt)
-axis([-10 110 -.1 1.1])
-xlabel('Percent samples modulated')
+set(gcf, 'Name', 'Parameter comp', 'Position', [480   301   828   677])
 
-subplot(2,2, 2); cla; hold on
-xs = log2(nsegs);
-s = rectangle('Position', [log2(stand_ncells)-.2 -.05 .4 2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
-plot([-10 110], 1-[stand_prop/100 stand_prop/100], 'k:', 'LineWidth', 1)
-gt = [nsegs(1:4:end) nsegs(end)];
-set(gca, 'XTick', log2(gt), 'XTickLabel', gt)
-axis([-1 log2(nsegs(end)*2) -.1 1.1])
+subplot(2,2, 1); cla; hold on
+xs = log2(segs_range);
+s = rectangle('Position', [log2(stand_ncells)-.2 -1.1 .4 2.2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
+set(gca, 'XTick', xs, 'XTickLabel', segs_range, 'XTickLabelRotation', -90)
+axis([-1  length(xs)+1 -1.1 1.1]); axis square
 xlabel('Number of cells')
 
-subplot(2,2, 3); cla; hold on
-xs = log2(nsamples);
-s = rectangle('Position', [log2(stand_nsamples)-.2 -.05 .4 2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
-plot([-10 110], 1-[stand_prop/100 stand_prop/100], 'k:', 'LineWidth', 1)
-gt = [nsamples(2:2:end-2) nsamples(end)];
-gtl = bin_timeres*[nsamples_binned(2:2:end-2, 1); nsamples_binned(end, 1)];
-set(gca, 'XTick', log2(gt), 'XTickLabel', gtl)
-axis([log2(nsamples(1)/2) log2(nsamples(end)*2) -.1 1.1])
+subplot(2,2, 2); cla; hold on
+s = rectangle('Position', [log2(stand_nsamples)-.2 -1.1 .4 2.2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
+set(gca, 'XTick', log2(sample_range), 'XTickLabel', nsamples_time, 'XTickLabelRotation', -90)
+axis([log2(sample_range(1))/1.1  log2(sample_range(end))*1.1 -1.1 1.1]); axis square
+p99 = plot([-1 -1], [0 1], '-', 'Color', stand_clr, 'LineWidth', 10);
 xlabel('Total time (sec)')
 
+subplot(2,2, 3); hold on
+s = rectangle('Position', [(stand_prop)-2.5 -1.1 5 2.2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
+gt = [0 20:20:80 100];
+set(gca, 'XTick', gt)
+axis([-10 110 -1.1 1.1]); axis square
+xlabel('Percent samples in C_1')
+
 subplot(2,2, 4); cla; hold on
-s = rectangle('Position', [(stand_prop_cells)-2.5 -.05 5 2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
-plot([-10 110], 1-[stand_prop/100 stand_prop/100], 'k:', 'LineWidth', 1)
-gt = [0:20:100];
-set(gca, 'XTick', (gt), 'XTickLabel', gt)
-axis([-10 110 -.1 1.1])
+s = rectangle('Position', [(stand_prop_cells)-2.5 -1.1 5 2.2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
+gt = [0 20:20:80 100];
+set(gca, 'XTick', gt)
+axis([-10 110 -1.1 1.1]); axis square
 xlabel('Percent cells modulated')
 
 for varLoop = 1:length(vars2plot)
     subplot(2,2, varLoop); hold on
-        x = eval(sprintf('%s', vars2plot{varLoop}));
-    if varLoop==2 || varLoop == 3
+        x = eval(sprintf('%s.xval', vars2plot{varLoop}));
+    if varLoop==1 || varLoop == 2
         x = log2(x);
     else
     end
     for depLoop = 1:length(dep2plot)
-        y = eval(sprintf('%s_%s', vars2plot{varLoop}, dep2plot{depLoop}));
+        y = eval(sprintf('%s.%s', vars2plot{varLoop}, dep2plot{depLoop}));
         c = clrs2plot(depLoop,:);
-        plot(x, nanmean(y, 2), 'Color', shift_colormap(c, 2), 'LineWidth', 3)
+        eval(sprintf('p%d = plot(x, nanmean(y, 2), ''Color'', shift_colormap(c, 2), ''LineWidth'', 3);', depLoop));
         for i = 1:length(x)
             xs = x(i)*ones(length(y(i,:)),1);
             scatter(xs, y(i,:), msize, 'MarkerFaceColor', c, 'MarkerEdgeColor', medge, 'MarkerFaceAlpha', .8);
         end
     end
+    if varLoop==4
+    legend([p1 p2 p3 p4 p5], 'Conj. Ipos', 'Avg. Ipos', 'Spatial d', 'Spk dist',  'IsoMap dist',...
+        'Location', 'northwest', 'EdgeColor', 'none')
+    end
 end
-%%
-function [i_val, e_val, sd_val, iso_val, ns] = i_e_powermod(temp_struct)
-sd = 2.^(temp_struct.sd1);% - abs(temp_struct.sd2); % sd1 and sd2 are essentially the same
-e1 = temp_struct.ensem1;
-e2 = temp_struct.ensem2;
-e = (e1-e2);
-i1 = nanmean(abs(temp_struct.ipos1), 1);
-i2 = nanmean(abs(temp_struct.ipos2), 1);
-ipos = nanmean(abs(temp_struct.ipos1) - abs(temp_struct.ipos2), 1);
-s = temp_struct.switch_binned;
-iso = normalize_cols(temp_struct.isoMap);
-iso = iso(:,1)';
+subplot(2,2, 2); 
+legend(p99, {'Standard val'}, 'Location', 'northwest', 'EdgeColor', 'none')
+subplot(2,2, 1); 
+ylabel(sprintf('Sesnsitivity to C_2\n (\\SigmaC_2-\\SigmaC_1)/(\\SigmaC_2+\\SigmaC_1)'));
+subplot(2,2, 3); 
+ylabel(sprintf('Sesnsitivity to C_2\n (\\SigmaC_2-\\SigmaC_1)/(\\SigmaC_2+\\SigmaC_1)'));
 
-e = abs(e);
-ipos = abs(ipos);
-e_val = nansum(e(s==1))/nansum(e);
-sd_val = nansum(sd(s==1))/nansum(sd);
-i_val = nansum(ipos(s==1))/nansum(ipos);
-iso_val = nansum(iso(s==1))/nansum(iso);
-%             i_val = nansum(abs(ipos(s==1)))/nansum(abs(ipos));
-ns = length(e);
+%% Showing the standard data with mixed and chunked switch signal
+stan1 = load('D:\Sample Data\ensemble_prob\standard\256_0.mat');
+stan2 = load('D:\Sample Data\ensemble_prob\standard\256_11.mat');
+% stan1.isoDist = squareform(pdist(stan1.isoMap));
+% stan2.isoDist = squareform(pdist(stan2.isoMap));
+st = {'stan1' 'stan2'};
+[ns, nt] = size(stan1.bin_spks);
+figure(101); clf; colormap viridis
+set(gcf, 'Name', 'Example spikes, grouped vs interleved', 'Position', [335         228        1288         750])
+set(gcf, 'Color', 'w')
+
+nsubs = 6;
+clr = plasma(nsubs);
+
+inds = [nt-1000:nt];
+inds = [2000:3000];
+nt = length(inds);
+for i = 1:2
+    %
+    temp_struct         = eval(sprintf('%s;', st{i}));
+    spk_dist            = normalize_matrix(squareform(pdist(temp_struct.bin_spks')));
+%     spk_corr            = corr(temp_struct.bin_spks(:,inds), 'Type','Kendall');
+%     time_corr           = nanmean(spk_corr,1);
+    ensemble_val        = normalize_matrix(temp_struct.ensem1);
+    ipos1               = normalize_matrix(nanmean(abs(temp_struct.ipos1), 1));
+    spatialDistinct     = normalize_matrix(2.^(temp_struct.sd1));
+    isoDist             = normalize_matrix(squareform(pdist(temp_struct.isoMap)));
+    %
+    sig = temp_struct.switch_binned*1.25 - .15;
+    sig = sig(inds);
+    spk_dist            = spk_dist(inds);
+    ensemble_val        = ensemble_val(inds);
+    ipos1               = ipos1(inds);
+    spatialDistinct     = spatialDistinct(inds);
+    isoDist             = isoDist(inds);
+    
+    
+    subplot_tight(2,2,0+i); cla; hold on
+    plot(temp_struct.switch_binned(inds)*120 -10, 'r')
+    imagesc(temp_struct.bin_spks(1:100,inds), [0 4])
+    axis([ 0 nt -20.5 120.5])
+    set(gca, 'YTick', [0:20:100], 'XTick', [0:250:1000], 'XTickLabel', inds(1:250:1001))
+    if i==1; ylabel('Example cell #'); end
+    if i==2; yyaxis('right'); set(gca, 'Ycolor', 'r'); ylabel('Context', 'Color', 'r'); yticks([]); end
+
+    jj = nsubs*2 + i;
+    q = 1;
+    subplot_tight(nsubs*2, 2, jj); cla; hold on; jj = jj+2;
+    plot(sig,'r')
+    plot(ensemble_val,'k')
+    ylabel(sprintf('Conjoint\nIpos'))
+    axis([ 0 nt -.25 1.1 ])
+    set(gca, 'YTick', [], 'XTick', [0:250:1000], 'XTickLabel', '')
+
+    subplot_tight(nsubs*2, 2, jj); cla; hold on; jj = jj+2;
+    plot(sig,'r')
+    plot(ipos1,'-', 'Color', clr(q,:)); q = q+1;
+    ylabel(sprintf('average\nIpos'))
+    axis([ 0 nt -.25 1.1 ])
+    set(gca, 'YTick', [], 'XTick', [0:250:1000], 'XTickLabel', '')
+    
+    subplot_tight(nsubs*2, 2, jj); cla; hold on; jj = jj+2;
+    plot(sig,'r')
+    plot(spatialDistinct,'-', 'Color', clr(q,:)); q = q+1;
+    ylabel(sprintf('Spatial\ndistinctive'))
+    axis([ 0 nt -.25 1.1 ])
+    set(gca, 'YTick', [], 'XTick', [0:250:1000], 'XTickLabel', '')
+    
+    subplot_tight(nsubs*2, 2, jj); cla; hold on; jj = jj+2;
+    plot(sig,'r')
+    plot(spk_dist,'-', 'Color', clr(q,:)); q = q+1;
+    ylabel(sprintf('Spk\ndist'))
+    axis([ 0 nt -.25 1.1 ])
+    set(gca, 'YTick', [], 'XTick', [0:250:1000], 'XTickLabel', '')
+    
+    subplot_tight(nsubs*2, 2, jj); cla; hold on; jj = jj+2;
+    plot(sig,'r')
+    plot(isoDist,'-', 'Color', clr(q,:)); q = q+1;
+    ylabel(sprintf('IsoMap\ndist'))
+    axis([ 0 nt -.25 1.1 ])
+    set(gca, 'YTick', [], 'XTick', [0:250:1000], 'XTickLabel', inds(1:250:1001))
+%     ylabel('Sample')
+    xlabel('Sample')
+end
+
+%%
+figure(104); clf; hold on
+set(gcf, 'Name', 'Grouped vs interleaved switch', 'Position', [981   235   531   397])
+set(gcf, 'Color', 'w')
+i = 0;
+b1 = bar(-99, 1, 'FaceColor', [.3 .3 .3], 'FaceAlpha', .7, 'EdgeColor', 'k', ...
+    'BarWidth', .6, 'LineStyle', '-', 'LineWidth', 2);
+b2 = bar(-98, 1, 'FaceColor', [.3 .3 .3]./3, 'FaceAlpha', .7, 'EdgeColor', 'k', ...
+    'BarWidth', .6, 'LineStyle', 'none', 'LineWidth', 2);
+
+gb_quickbar(i-.4, stand_comp.ensemMod(:,1), [.3 .3 .3], '-')
+gb_quickbar(i+.4, stand_comp.ensemMod(:,2), [.3 .3 .3]./3, 'none')
+i = 2;
+gb_quickbar(i-.4, stand_comp.iposMod(:,1), clr(1,:), '-')
+gb_quickbar(i+.4, stand_comp.iposMod(:,2), clr(1,:)./1.5, 'none')
+i = 4;
+gb_quickbar(i-.4, stand_comp.spatialDistMod(:,1), clr(2,:), '-')
+gb_quickbar(i+.4, stand_comp.spatialDistMod(:,2), clr(2,:)./1.5, 'none')
+i = 6;
+gb_quickbar(i-.4, stand_comp.spkDist(:,1), clr(3,:), '-')
+gb_quickbar(i+.4, stand_comp.spkDist(:,2), clr(3,:)./1.5, 'none')
+i = 8;
+gb_quickbar(i-.4, stand_comp.IsoMapDist(:,1), clr(4,:), '-')
+gb_quickbar(i+.4, stand_comp.IsoMapDist(:,2), clr(4,:)./1.5, 'none')
+plot([-1 9], [0 0], 'k', 'LineWidth', 3)
+axis([ -1 9 -1.1 1.1]) 
+legend([b1 b2], {'Grouped', 'Interleaved'}, 'EdgeColor', 'none')
+set(gca, 'XTick', 0:2:8, 'XTickLabel', {'Conj. Ipos', 'Avg. Ipos', 'Spatial d', 'Spk dist',  'IsoMap dist'})
+%%
+
+
+figure(103); clf
+
+hold on
+xs = log2(isomap_segrange);
+s = rectangle('Position', [log2(stand_ncells)-.2 -1.1 .4 2.2]); s.FaceColor = stand_clr; s.EdgeColor = 'none';
+set(gca, 'XTick', xs, 'XTickLabel', isomap_segrange, 'XTickLabelRotation', -90)
+axis([-1 xs(end)+1 -1.1 1.1])
+xlabel('Number of IsoMap dims')
+
+vars2plot = {'isomap_dims'};
+dep2plot = {'ensemMod', 'iso_ensemMod'};
+for varLoop = 1:length(vars2plot)
+        x = eval(sprintf('%s.xval', vars2plot{varLoop}));
+        x = log2(x);
+    for depLoop = 1:length(dep2plot)
+        y = eval(sprintf('%s.%s', vars2plot{varLoop}, dep2plot{depLoop}));
+        c = clrs2plot(depLoop,:);
+        eval(sprintf('p%d = plot(x, nanmean(y, 2), ''Color'', shift_colormap(c, 2), ''LineWidth'', 3)', depLoop))
+        for i = 1:length(x)
+            xs = x(i)*ones(length(y(i,:)),1);
+            scatter(xs, y(i,:), msize, 'MarkerFaceColor', c, 'MarkerEdgeColor', medge, 'MarkerFaceAlpha', .8);
+        end
+    end
+    legend([p1 p2], '256 cells', 'IsoMap', 'Location', 'northwest')
+end
+
+
+%%
+function struct_out = eval_data_conjointipos(struct_in, ddir, loop_range, randLoops, plotting)
+%     ddir = [topdir '\ncells\'];
+    struct_out = struct_in;
+    for i = 1:length(loop_range)
+        for j = randLoops
+            %
+            if iscell(loop_range(i)) % only used in standard case
+                fn = sprintf('%s%s.mat', ddir, loop_range{i});
+%                 j = i;
+                struct_out.xval(i)       = NaN;
+            else
+                fn = sprintf('%s%d_%d.mat', ddir, loop_range(i), j-1);
+                struct_out.xval(i)       = loop_range(i);
+            end
+            if isfile(fn)
+                disp(fn)
+                temp = load(fn);
+                [spks_val, sd_val, ipos_val, iso_val, e_val] = i_e_powermod(temp);
+
+                struct_out.spkDist(i,j)       = spks_val;
+                struct_out.spatialDistMod(i,j)= sd_val;
+                struct_out.iposMod(i,j)       = ipos_val;
+                struct_out.IsoMapDist(i,j)    = iso_val;
+                struct_out.ensemMod(i,j)      = e_val;  
+                if plotting % j==Inf
+                    figure(i+2000); clf;
+                    subplot(1,3,1);
+                    hold on;
+                    inds = temp.switch_binned==0;
+                    scatter(temp.isoMap(inds,1), temp.isoMap(inds,2), 'k.')
+                    inds = temp.switch_binned==1;
+                    scatter(temp.isoMap(inds,1), temp.isoMap(inds,2), 'r.')
+
+
+                    subplot(1,3,2);
+                    hold on;
+                    inds = temp.switch_binned==0;
+                    scatter(temp.isoMap(inds,3), temp.isoMap(inds,2), 'k.')
+                    inds = temp.switch_binned==1;
+                    scatter(temp.isoMap(inds,3), temp.isoMap(inds,2), 'r.')
+
+                    subplot(1,3,3);
+                    hold on;
+                    inds = temp.switch_binned==0;
+                    scatter(temp.isoMap(inds,1), temp.isoMap(inds,3), 'k.')
+                    inds = temp.switch_binned==1;
+                    scatter(temp.isoMap(inds,1), temp.isoMap(inds,3), 'r.')
+                end
+            else
+                warning('Could not find file: %s', fn)
+            end
+        end
+    end
+end
+
+function [spks_val, sd_val, ipos_val, iso_val, e_val] = i_e_powermod(temp_struct)
+inds2 = temp_struct.switch_binned==1; % temp_struct.switch_binned==0 is first ref frame
+
+% ensemble_val = abs(temp_struct.ensem1);
+ensemble_val = abs(temp_struct.ensem_av1);
+ipos1 = nanmean(abs(temp_struct.ipos1), 1);
+spatialDistinct = 2.^(temp_struct.sd1);% - abs(temp_struct.sd2); % sd1 and sd2 are essentially the same
+isoDist = squareform(pdist(temp_struct.isoMap));
+% calculate selectivity for each (a-b)/(a+b)
+if isfield(temp_struct, 'bin_spks')
+    spk_dist = squareform(pdist(temp_struct.bin_spks'));
+    spks_val    = (nansum(spk_dist(inds2)) - nansum(spk_dist(~inds2))) /...
+        ( nansum(spk_dist(inds2)) + nansum(spk_dist(~inds2)) );
+    
+else
+    spks_val = NaN;
+end
+% sd_val      = (nansum(spatialDistinct(inds2)) - nansum(spatialDistinct(~inds2))) /...
+%     ( nansum(spatialDistinct(inds2)) + nansum(spatialDistinct(~inds2)) );
+% ipos_val    = (nansum(ipos1(inds2)) - nansum(ipos1(~inds2))) /...
+%     ( nansum(ipos1(inds2)) + nansum(ipos1(~inds2)) );
+% iso_val    = (nansum(isoDist(inds2)) - nansum(isoDist(~inds2))) /...
+%     ( nansum(isoDist(inds2)) + nansum(isoDist(~inds2)) );
+% e_val       = (nansum(ensemble_val(inds2)) - nansum(ensemble_val(~inds2))) /...
+%     ( nansum(ensemble_val(inds2)) + nansum(ensemble_val(~inds2)) );
+
+sd_val      = (nanmean(spatialDistinct(inds2)) - nanmean(spatialDistinct(~inds2))) /...
+    ( nanmean(spatialDistinct(inds2)) + nanmean(spatialDistinct(~inds2)) );
+ipos_val    = (nanmean(ipos1(inds2)) - nanmean(ipos1(~inds2))) /...
+    ( nanmean(ipos1(inds2)) + nanmean(ipos1(~inds2)) );
+iso_val    = (nanmean(isoDist(inds2)) - nanmean(isoDist(~inds2))) /...
+    ( nanmean(isoDist(inds2)) + nanmean(isoDist(~inds2)) );
+e_val       = (nanmean(ensemble_val(inds2)) - nanmean(ensemble_val(~inds2))) /...
+    ( nanmean(ensemble_val(inds2)) + nanmean(ensemble_val(~inds2)) );
+
 end
             
+function gb_quickbar(x, y, clr, lineedge)
+xs = gb_rand_jitter(y,3);
+bar(x, nanmean(y), 'FaceColor', clr, 'FaceAlpha', .7, 'EdgeColor', 'k', ...
+    'BarWidth', .6, 'LineStyle', lineedge, 'LineWidth', 2)
+scatter(x+y*0+xs, y, 50, 'o', 'MarkerFaceColor', clr, 'MarkerEdgeColor', 'k', 'MarkerFaceAlpha', .5)
+errorbar(x, nanmean(y), std(nanmean(y)), 'Color', 'k')
+end

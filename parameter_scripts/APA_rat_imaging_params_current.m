@@ -5,15 +5,15 @@ params.arena_center             = [ 127.5, 127.5]; % pixel center of behav cam, 
 params.pixpercm                 = 3.1220; % pixel radius of behav cam env
 params.behav_fps                = 30;
 params.behav_smoothing_interval = .25; % in seconds, length of smoothing kernel
-
 params.pos_bins                 = [-45, -36:4:36, 45]; % in cm, x and y
 params.yaw_bin                  = -pi:pi/8:pi;
-params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
+params.rho_bin                  = 0:5:45;
+params.occupancy_thresh         = 3; % in seconds, minimum time in each bin to be counted for place map
 params.pfield_kernel_radius     = 3; % kernel ends up being [n*2 + 1] in bins
 params.smin_vals                = -50:5:-10; % smin values used to create the 'deconv_sweep.mat'
 % params.bayesian_random_shuffle  = 500;
-params.num_random_shuffle_pcell = 500; 
-params.num_random_shuffle_decode= 100; 
+params.num_random_shuffle_pcell = 20;%500; 
+params.num_random_shuffle_decode= 5; 
 % params.speed_thresh             = 5; % speed thresh in cm/sec
 params.num_partitions           = 2;
 % params.max_spd_thresh           = 100;
@@ -36,7 +36,6 @@ params.skip_contour_bounding    = false;
 % params.reuse_contour_crop       = 'Crop_params.mat'; % use the previous ms file contour crop, unless empty
 params.cameraName               = {'HPC_miniscope1', 'ACC_miniscope2'}; % will default to 'MiniLFOV'
 params.reuse_contour_crop       = 'bounding_box.mat'; % use the previous ms file contour crop, unless empty
-
 params.parfor_progbar           = false; % whether to show the parfor progress figure
 
 

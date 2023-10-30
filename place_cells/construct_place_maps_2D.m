@@ -1,62 +1,66 @@
-function [struct_in] = construct_place_maps_2D(struct_in, x, y, dt, spks, bins, params)
+function [struct_in] = construct_place_maps_2D(struct_in, x, y, dt, spks, xbins, ybins, params)
 % input data should already be speed thresholded
 % pos_bins = params.pos_bins;
 ksize = params.pfield_kernel_radius;
 occupancy_thresh = params.occupancy_thresh;
 
-nbins = length(bins)-1;
-[vmap, vmap_counts, xbin, ybin]    = make_occupancymap_2D(x, y, dt, bins, bins);
+n_xbins = length(xbins)-1;
+n_ybins = length(ybins)-1;
+[vmap, vmap_counts, xbin, ybin]    = make_occupancymap_2D(x, y, dt, xbins, ybins);
 
 % firsthalf = cumsum(dt)<=sum(dt)/2;
 nsplits = 2;
 
-var_binned = sub2ind([size(vmap_counts)], xbin, ybin);
+var_binned = sub2ind([size(vmap_counts)], ybin, xbin);
 counts = vmap_counts(:)';
-splits = NaN(length(xbin),1);
-odd_ind = [];
-split_equal = 1;
-% ux = unique(counts);
-for i = 1:length(counts)
-%     ind = find(var_binned==ux(i));
-    ind = find(var_binned==i);
-    [~, ranord] = sort(rand(length(ind),1));
-%     ind = ind(ranord);
-    if mod(length(ind), 2) == 1
-        % this is to keep the last split value from always geting one extra
-        % when there's an odd number
-        odd_ind = ind(end);
-        ind = ind(1:end-1);
-    else
-        odd_ind = [];
-    end
-    if ~isempty(ind)
-        xi = floor(linspace(0, length(ind), nsplits+1));
-        for j = 1:nsplits
-            splits(ind(xi(j)+1:xi(j+1))) = j;
+if isfield(struct_in, 'splits')
+    splits = struct_in.splits;
+else
+    splits = NaN(length(xbin),1);
+    odd_ind = [];
+    split_equal = 1;
+    % ux = unique(counts);
+    for i = 1:length(counts)
+        %     ind = find(var_binned==ux(i));
+        ind = find(var_binned==i);
+        [~, ranord] = sort(rand(length(ind),1));
+            ind = ind(ranord);
+        if mod(length(ind), 2) == 1
+            % this is to keep the last split value from always geting one extra
+            % when there's an odd number
+            odd_ind = ind(end);
+            ind = ind(1:end-1);
+        else
+            odd_ind = [];
+        end
+        if ~isempty(ind)
+            xi = floor(linspace(0, length(ind), nsplits+1));
+            for j = 1:nsplits
+                splits(ind(xi(j)+1:xi(j+1))) = j;
+            end
+        end
+        if ~isempty(odd_ind)
+            splits(odd_ind) = split_equal;
+            split_equal = mod(split_equal, nsplits)+1;
         end
     end
-    if ~isempty(odd_ind)
-        splits(odd_ind) = split_equal;
-        split_equal = mod(split_equal, nsplits)+1;
-    end
 end
-
 % splits = uint8(mod(cumsum(dt)./ceil(sum(dt)/(nsplits/2)), 1)<.5);
 % splits(splits==0) = 2;
 % splits = uint8(splits); 
 
-[vmap1, ~]   = make_occupancymap_2D(x(splits==1), y(splits==1), dt(splits==1), bins, bins);
-[vmap2, ~]   = make_occupancymap_2D(x(splits==2), y(splits==2), dt(splits==2), bins, bins);
+[vmap1, ~]   = make_occupancymap_2D(x(splits==1), y(splits==1), dt(splits==1), xbins, ybins);
+[vmap2, ~]   = make_occupancymap_2D(x(splits==2), y(splits==2), dt(splits==2), xbins, ybins);
 % vmap(vmap<occupancy_thresh) = NaN;
 nsegs = size(spks, 1);
-spkmap = NaN(nsegs, nbins, nbins);
-spkmap_smooth = NaN(nsegs, nbins, nbins);
-pfields = NaN(nsegs, nbins, nbins);
-pfields_smooth = NaN(nsegs, nbins, nbins);
-pfields_split1 = NaN(nsegs, nbins, nbins);
-pfields_smooth_split1 = NaN(nsegs, nbins, nbins);
-pfields_split2 = NaN(nsegs, nbins, nbins);
-pfields_smooth_split2 = NaN(nsegs, nbins, nbins);
+spkmap = NaN(nsegs, n_ybins, n_xbins);
+spkmap_smooth = NaN(nsegs, n_ybins, n_xbins);
+pfields = NaN(nsegs, n_ybins, n_xbins);
+pfields_smooth = NaN(nsegs, n_ybins, n_xbins);
+pfields_split1 = NaN(nsegs, n_ybins, n_xbins);
+pfields_smooth_split1 = NaN(nsegs, n_ybins, n_xbins);
+pfields_split2 = NaN(nsegs, n_ybins, n_xbins);
+pfields_smooth_split2 = NaN(nsegs, n_ybins, n_xbins);
 split_corr = NaN(nsegs, 1);
 split_p = NaN(nsegs, 1);
 
@@ -72,7 +76,7 @@ vmap2(vmap2<occupancy_thresh/2) = NaN;
 for i = 1:nsegs
     %%
     % generate the spk map
-    [smap, ~] = make_occupancymap_2D(x,  y,  spks(i, :), bins, bins);
+    [smap, ~] = make_occupancymap_2D(x,  y,  spks(i, :), xbins, ybins);
     % threshold based on occupancy
     spkmap(i,:,:) = smap;
     % divide by time spent for weighted place field
@@ -89,8 +93,8 @@ for i = 1:nsegs
     
     
     % doing split half correlation metric
-    [smap1, ~] = make_occupancymap_2D(x(splits==1),  y(splits==1),  spks(i, (splits==1)), bins, bins);
-    [smap2, ~] = make_occupancymap_2D(x(splits==2),  y(splits==2),  spks(i, (splits==2)), bins, bins);
+    [smap1, ~] = make_occupancymap_2D(x(splits==1),  y(splits==1),  spks(i, (splits==1)), xbins, ybins);
+    [smap2, ~] = make_occupancymap_2D(x(splits==2),  y(splits==2),  spks(i, (splits==2)), xbins, ybins);
     p1 = smap1./vmap1;
     pfields_split1(i,:,:) = p1;
     p2 = smap2./vmap2;

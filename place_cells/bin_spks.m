@@ -20,7 +20,7 @@ else
         nsub = nsub-1;
     end
     sumspks = NaN(nsegs, nsub);
-    for i = 1:nsub
+    for i = 1:nsub-1
         sumspks(:, i) = sum(spks(:, tvec(i):tvec(i+1)), 2);
     end
 end

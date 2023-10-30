@@ -4,13 +4,13 @@
 % behav var to look into - total path length, 1st/2nd half in water sess,
 % inter-entrance times
 clear
-analysis_version = 'v1.43';
+analysis_version = 'v1.51';
 diarydir  = 'C:\Users\gjb326\Documents\MATLAB\GJB_MATLAB\diaries\';
 diaryname = sprintf('%stemp_reprocessing_%s', diarydir, analysis_version);
 diary(diaryname)
 params = [];
-% APA_rat_imaging_params_current;
-APA_PKCZmouse_imaging_params_current;
+APA_rat_imaging_params_current;
+% APA_PKCZmouse_imaging_params_current;
 
 fprintf('rand shuff pcells = %d\n',params.num_random_shuffle_pcell)
 fprintf('rand shuff decode = %d\n',params.num_random_shuffle_decode)
@@ -22,10 +22,10 @@ animals = {'HPCACC24500', 'HPCACC24502', 'HPCACC24503', 'Acc20832', 'Acc19947', 
 fprintf('\t\tanalysis ver = %s\n', analysis_version)
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/';
 experiment_folder = [];
-animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
-experiment_folder = {'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\PKCZ_imaging\'};
+% animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
+% experiment_folder = {'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\PKCZ_imaging\'};
 % experiment_folder{1} = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA/';
-% experiment_folder{1} = 'D:/GarrettBlair/APA/';
+experiment_folder{1} = 'D:/GarrettBlair/APA/';
 % animals = {'Acc20832', 'Acc19947', 'Hipp18240'};
 numAnimals = length(animals);
 % experiment_folder{2} = 'D:/APA recordings/';
@@ -67,30 +67,21 @@ if rerun_processed == true
                         fprintf('\t\tstart time: %s  \n', datetime())
                         clearvars tempms ms
                         tempms = load(processedFile, 'ms');
-                        
-%                         ms.spks = normalize_rows(ms.neuron.S_mat);
-%                         ms.spks(isnan(ms.spks)) = 0;
-                        [ms] = APA_generate_placemaps(tempms.ms, params);
-                        
-                        if ~isfield(tempms.ms.room, 'ensemble_pos_info')
-                            fprintf('\t\trunning ipos...\n')
-                            [ms.room.momentary_pos_info,  rtemp, ms.room.ensemble_pos_info]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
-                            [ms.arena.momentary_pos_info, atemp, ms.arena.ensemble_pos_info] = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
-                        else
-                            fprintf('\t\ttransferring ipos...\n')
-                            ms.room.momentary_pos_info  = tempms.ms.room.momentary_pos_info;
-                            ms.room.ensemble_pos_info   = tempms.ms.room.ensemble_pos_info;
-                            ms.arena.momentary_pos_info = tempms.ms.arena.momentary_pos_info;
-                            ms.arena.ensemble_pos_info  = tempms.ms.arena.ensemble_pos_info;
+                                                
+%                         [ms] = APA_generate_placemaps(tempms.ms, params);
+                        ms = tempms.ms;
+                        if isfield(ms.room, 'ensemble_pos_info')
+                            ms.room = rmfield(ms.room, 'ensemble_pos_info');
                         end
-                        if ~isfield(tempms.ms.room, 'svm_decoding')
-                            fprintf('\t\trunning svm decode...\n')
-                            [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
-                        else
-                            fprintf('\t\ttransferring svm decode...\n')
-                            ms.room.svm_decoding        = tempms.ms.room.svm_decoding;
-                            ms.arena.svm_decoding       = tempms.ms.arena.svm_decoding;
+                        if isfield(ms.arena, 'ensemble_pos_info')
+                            ms.arena = rmfield(ms.arena, 'ensemble_pos_info');
                         end
+                        fprintf('\t\trunning ipos...\n')
+                        [ms.room.momentary_pos_info,  rtemp, ms.room.conjoint_ipos_min, ms.room.conjoint_ipos_av]  =  Fenton_ipos(ms, params.ipos_int_time, 'room', params);
+                        [ms.arena.momentary_pos_info, atemp, ms.arena.conjoint_ipos_min, ms.arena.conjoint_ipos_av] = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
+                        
+%                         fprintf('\t\trunning svm decode...\n')
+%                         [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
                         
                         save(processedFile, 'ms', 'params', 'analysis_version', '-v7.3');
                         updated_files{length(updated_files) + 1, 1} = processedFile;

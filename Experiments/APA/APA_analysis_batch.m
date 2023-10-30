@@ -1,8 +1,9 @@
 % behav var to look into - total path length, 1st/2nd half in water sess,
 % inter-entrance times
-
+clear
 params = [];
 APA_rat_imaging_params_current;
+% APA_PKCZmouse_imaging_params_current;
 
 
 warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
@@ -12,18 +13,19 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 % animals = {'Hipp18240'};
 animals = {'HPCACC24500', 'HPCACC24502', 'HPCACC24503'};% animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
-analysis_version = 'v1.2';
+analysis_version = 'v1.42';
 dir_list_fname = '_directory_list.csv';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA/';
 experiment_folder = 'D:/GarrettBlair/APA/';
+% experiment_folder = 'Z:/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/APA_HPCACC/';
 % experiment_folder = 'D:/APA recordings/';
 
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
 rerun_behav         = false;
 rerun_place         = false;
-resave_proccessed   = false;
+resave_proccessed   = true;
 resave_contours     = false;
 rerun_processed    = false;
 fit_contours_fullFOV= false;
@@ -47,6 +49,7 @@ for animalLoop = 1:numAnimals
         fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
         % read in behavior data from tracker
         for sessionLoop = 1:AnimalDir.numSess
+            %%
             behaviorFile        = AnimalDir.behaviorFile{sessionLoop};
             camFolderExists = isfolder([AnimalDir.SessionDir{sessionLoop} cameraName]);
             run_this_sess = isempty(dir(behaviorFile)) == true || rerun_behav==true;
@@ -56,11 +59,12 @@ for animalLoop = 1:numAnimals
                 fprintf('\n%s\n...', AnimalDir.SessionDir{sessionLoop})
                 %
                 if PRINT_ONLY==false
+%                     disp('a')
                     [ms, behav, params_sub] = APA_generate_data_struct(AnimalDir, sessionLoop, params);
                     ms.params               = params_sub;
                     ms.cameraName           = cameraName;
                     [ms]                    = extract_caiman_data(ms, params, cameraName);
-                    save(behaviorFile, 'ms', 'behav', 'analysis_version', 'AnimalDir');
+                    save(behaviorFile, 'ms', 'behav', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
                 fprintf('Done! ->  %s\n', behaviorFile)
                 %%%%%%%%%%%%%%%%%%%
@@ -102,18 +106,19 @@ for animalLoop = 1:numAnimals
                     end
                     ms.spks = normalize_rows(ms.neuron.S_mat);
                     ms.spks(isnan(ms.spks)) = 0;
-                    
+                    tic
                     [ms] = APA_generate_placemaps(ms, params);
-                    
+                    toc
                     [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
                     [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
                     [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
                     
-                    save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir');
+                    save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
                 %
                 fprintf(' \nDone!\n\t\t%s\n', placecellFile)
                 toc(qq)
+                fprintf('\n\n')
             else
                 fprintf('~~~PCELL analysis skipped: %s\n', AnimalDir.Sessname{sessionLoop})
             end
@@ -130,7 +135,7 @@ for animalLoop = 1:numAnimals
                 %
                 if PRINT_ONLY==false && isfile(placecellFile)
                     load(placecellFile, 'ms');
-                    save(processedFile, 'ms', 'params', 'analysis_version', 'AnimalDir');
+                    save(processedFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
                 %
                 fprintf(' Done!\n\t\t%s\n', processedFile)

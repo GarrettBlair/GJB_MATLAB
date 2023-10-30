@@ -11,7 +11,8 @@ if issparse(A)
     A = full(A);
 end
 A = normalize_cols(A);
-contours = gbContours(A, dims, [], .6);
+contour_draw_thresh = .6;
+contours = gbContours(A, dims, [], contour_draw_thresh);
 
 %
 if ~exist('background', 'var') || isempty(background)
@@ -29,11 +30,10 @@ if exist('idx_components', 'var') && ~isempty(idx_components)
     bmap = ones(length(idx_components),1)*[0 1 .3];
     mc = color_contours_im(contours(idx_components, :, :), bmap);
     idx_components_bad = setdiff(segID, idx_components);
-%     bc = squeeze(sum(contours(idx_components_bad, :, :), 1));
-    bmap = plasma(length(idx_components_bad)*4);
-        bmap = bmap(randperm(length(idx_components_bad)*4), :);
-    bmap(:,2) = 0;
-    bmap = ones(length(idx_components),1)*[1 0 .3];
+%     bmap = plasma(length(idx_components_bad)*4);
+%     bmap = bmap(randperm(length(idx_components_bad)*4), :);
+%     bmap(:,2) = 0;
+    bmap = ones(length(idx_components_bad),1)*[1 0 .3];
     bc = color_contours_im(contours(idx_components_bad, :, :), bmap );
 else
     if ~any(background(:))
@@ -112,7 +112,8 @@ else % else use whole FOV, no contours excluded
 end
 good_flag = true(nsegs,1);
 for j = 1:nsegs
-    a = (reshape(A(:,j), [dims]))>0;
+    a = (reshape(A(:,j), [dims]))>contour_draw_thresh;%0;
+    
     [yy, xx] = ind2sub(size(a), find(a));
     isgood = inpolygon(xx, yy, opx, opy);
 %     if ~any(a(:)) % if no pixles are left, it's bad
@@ -142,9 +143,10 @@ mc = color_contours_im(contours(idx_components, :, :), bmap);
 idx_components_bad = setdiff(segID, idx_components);
 
 if any(idx_components_bad)
-    bmap = plasma(length(idx_components_bad)*4);
-    bmap = bmap(randperm(length(idx_components_bad)*4), :);
-    bmap(:,2) = 0;
+%     bmap = plasma(length(idx_components_bad)*4);
+%     bmap = bmap(randperm(length(idx_components_bad)*4), :);
+%     bmap(:,2) = 0;
+    bmap = ones(length(idx_components_bad),1)*[1 0 .3];
     bc = color_contours_im(contours(idx_components_bad, :, :), bmap );
 else
     bc = 0;
