@@ -1,11 +1,16 @@
 function [rgb_im] = color_contours_im(contours, cm, bg)
 %%
+[nsegs, h, w] = size(contours);
+if nargin<2
+    cm = rand(nsegs, 3);
+    cm = (cm+.5)./2;
+    [~, ord] = sort(rand(nsegs,1));
+    cm = cm(ord,:);
+end
 if nargin<3
     bg = zeros(size(contours,2), size(contours,3));
 end
-[nsegs, h, w] = size(contours);
 if ~isvarname('cm') || isempty(cm)
-%     cm = jet(nsegs);
     cm = rand(nsegs, 3);
     cm = (cm+.5)./2;
     [~, ord] = sort(rand(nsegs,1));

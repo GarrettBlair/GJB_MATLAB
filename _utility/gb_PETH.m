@@ -6,7 +6,7 @@ if islogical(event) && ~any(size(sig)==length(event))
 elseif ~islogical(event)
     event_inds = event;
     event = false(length(sig), 1);
-    event(event_inds) = true;
+    event(event_inds==1) = true;
 end
 
 % if islogical(sig)

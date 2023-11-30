@@ -1,6 +1,58 @@
-expt_name = 'APA_water';
+expt_name = 'PKCZ_imaging';
+aname = 'mHPC23454';
+% aname = 'mHPC23459';
+dataDir = ['E:\RecordingData\GarrettBlair\' expt_name '\' aname '\processed_files'];
+region = 'HPC';
+saveDir = ['E:\RecordingData\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+file_str = ['*_' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], 6)
+cd(saveDir)
+
+Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'])
+
+%%
+expt_name = 'APA';
+% aname = 'HPCACC24500';
+aname = 'HPCACC24503';
+% dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files_OFCON'];
+% saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours_OFCON\manual_alignment_' region '\'];
+dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files'];
+saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+% region = 'HPC';
+region = 'HPC';
+file_str = ['*_' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+cd(saveDir)
+
+Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'])
+%%
+expt_name = 'APA';
+% aname = 'HPCACC24500';
+aname = 'HPCACC24502';
+dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files'];
+file_str = '*_HPC_miniscope1.mat';
+% file_str = '*_ACC_miniscope2.mat';
+
+saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment_ACC\'];
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+
+%%
+expt_name = 'APA';
+aname = 'Hipp18240';
+dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files'];
+file_str = '*_@placecells.mat';
+
+saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment\'];
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+
+%%
+% expt_name = 'APA_water';
+expt_name = 'APA';
 aname = 'Acc20832';
-dataDir = ['C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\' expt_name '\' aname '\processed_files'];
+% dataDir = ['C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\' expt_name '\' aname '\processed_files'];
+dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\temppro_ret'];
 file_str = '*_@placecells.mat';
 
 % saveDir = ['C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment'];
@@ -11,8 +63,9 @@ file_str = '*_@placecells.mat';
 % manual_contour_matching(dataDir, saveDir, aname, file_str, [], [3, 5:13], [])
 % saveDir = ['C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment\newlearn\'];
 % manual_contour_matching(dataDir, saveDir, aname, file_str, [], [11:22], [])
-saveDir = ['C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment\all\'];
+saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\temppro_ret\manual_alignment\'];
 manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+cd(saveDir)
 
 %%
 expt_name = 'APA_water';

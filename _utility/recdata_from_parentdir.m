@@ -51,6 +51,9 @@ switch trialname(1:2)
     case 'HA' % HABITUATION
         trial_type = 'HAB';
         trial_num = str2double( trialname( strfind(trialname, 'HAB')+3:end) );
+    case 'HC' % HABITUATION
+        trial_type = 'HC';
+        trial_num = str2double( trialname( strfind(trialname, 'HC')+2:end) );
     otherwise
         trial_type = 'IDK';
         trial_num = -1;

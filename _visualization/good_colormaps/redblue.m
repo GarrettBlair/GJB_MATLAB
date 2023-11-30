@@ -32,3 +32,4 @@ else
     b = flipud(r);
 end
 c = [r g b]; 
+% see also lbmap(256,'RedBlue')

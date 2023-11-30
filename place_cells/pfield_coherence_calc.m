@@ -1,6 +1,6 @@
 function [coh, coh_z] = pfield_coherence_calc(pfields, occupancy)
 
-[nsegs, nbins1, nbins2] = size(pfields);
+[nsegs, nbins2, nbins1] = size(pfields);
 neighbor_av_r = pfields*NaN;
 for c1 = 1:nbins1
     for c2 = 1:nbins2
@@ -26,6 +26,8 @@ for i = 1:nsegs
     valid = ~isnan(pcheck(:));
     if any(valid(:))
         coh(i) = corr(p1(valid), p2(valid));
+    else
+        drawnow
     end
     
 end

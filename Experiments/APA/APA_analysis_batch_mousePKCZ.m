@@ -9,9 +9,10 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 %
 % animals = {'Hipp16942'};
 % animals = {'Hipp18240'};
-animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
+% animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
+animals = {'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
-analysis_version = 'v1.0';
+analysis_version = 'v1.61';
 dir_list_fname = '_directory_list.csv';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
@@ -20,12 +21,13 @@ experiment_folder = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\';
 
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
-rerun_behav         = false;
-rerun_place         = false;
+rerun_behav         = true;
+rerun_place         = true;
 resave_proccessed   = true;
 resave_contours     = true;
 fit_contours_fullFOV= false;
 
+% params.parfor_progbar           = true; % whether to show the parfor progress figure
 
 % params.plotting                 = false;
 

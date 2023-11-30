@@ -9,19 +9,24 @@ occ_thresh = decode_params.occupancy_thresh; % minimum occupancy in time (sec) t
 x_fold_training = decode_params.x_fold_training;
 timeres = decode_params.ipos_int_time;
 
-t = ms.timestamps./1000;
-spks = ms.spks; % normalize_rows(ms.neuron.S_matw);
+% t = ms.timestamps./1000;
+% spks = ms.spks; % normalize_rows(ms.neuron.S_matw);
 % spks(isnan(spks)) = 0;
-spks_bin = bin_spks_time(spks, timeres, t, false);
-spks_bin(isnan(spks_bin))=0;
+% spks_bin = bin_spks_time(spks, timeres, t, false);
+% spks_bin(isnan(spks_bin))=0;
 
 tempparams.pos_bins = pos_bins; % in cm, x and y
-tempparams.occupancy_thresh = 1; % minimum in seconds
+tempparams.occupancy_thresh = occ_thresh; % minimum in seconds
 tempparams.skip_ensemble = true; %can skip ensemble prob calc
 %%
-spd = ms.speed_epochs; % [spd; spd(end)];
-is_moving = average_spks_time(spd', timeres, t, false, 'mean')>=.5;
-[~, room_struct, ~] = Fenton_ipos(ms, timeres, 'room', tempparams);
+% % % spd = ms.speed_epochs; % [spd; spd(end)];
+% % % is_moving = average_spks_time(spd', timeres, t, false, 'mean')>=.5;
+[room_struct] = bin_session_data(ms, timeres, 'room', decode_params);
+is_moving = speed_calc_gb(room_struct.x, room_struct.y) > decode_params.min_spd_thresh;
+
+
+spks_bin = room_struct.spks_bin; 
+
 ref_struct = room_struct;
 
 x = ref_struct.x; 
@@ -56,7 +61,8 @@ decodeStruct_room.error_map     = av_err_map;
 % decodeStruct_room.rand_error_map     = av_err_map;
 
 %%
-[~, arena_struct, ~] = Fenton_ipos(ms, timeres, 'arena', tempparams);
+[arena_struct] = bin_session_data(ms, timeres, 'arena', decode_params);
+% [~, arena_struct, ~] = Fenton_ipos(ms, timeres, 'arena', tempparams);
 ref_struct = arena_struct;
 
 x = ref_struct.x; 

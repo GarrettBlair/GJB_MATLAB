@@ -104,6 +104,8 @@ if draw_bounds
     save(tempCropName, 'valid_contour_bounds')
 end
 
+
+
 if params.remove_all_bad_caiman_segs == true
     allbad = unique([caiman_data.idx_components_bad, bad_inds']);
     fprintf('\nRemoving %d bad components and outside components\n', length(allbad))
@@ -116,5 +118,12 @@ else
     neuron = caiman_data;
 end
 
+if isfield(ms ,'goodFrames') && (length(ms.frameNum) - length(ms.goodFrames) > 0)
+    fprintf('\nRemoving %d bad frames\n', length(ms.frameNum) - length(ms.goodFrames))
+    [neuron] = caiman_downsample(neuron, ms.goodFrames, false);
+else
+    fprintf('\nNo bad frames found/removed\n')
+end
 ms.neuron = neuron;
+
 ms.valid_contour_bounds = valid_contour_bounds;

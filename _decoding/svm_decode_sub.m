@@ -47,31 +47,37 @@ end
 %     end
 % end
 %%%%%%%%%%%%%%%%%
-odd_ind = [];
-split_equal = 1;
-for i = 1:length(str_in.counts)
-    ind = find(str_in.var_binned==i);
-    [~, randord] = sort(rand(length(ind),1));
-    ind = ind(randord);
-    if mod(length(ind), 2) == 1
-        % this is to keep the last split value from always geting one extra
-        % when there's an odd number
-        odd_ind = ind(end);
-        ind = ind(1:end-1);
-    else
-        odd_ind = [];
-    end
-    if ~isempty(ind)
-        xi = floor(linspace(0, length(ind), x_fold_training+1));
-        for j = 1:x_fold_training
-            test_inds(ind(xi(j)+1:xi(j+1))) = j;
-        end
-    end
-    if ~isempty(odd_ind)
-        test_inds(odd_ind) = split_equal;
-        split_equal = mod(split_equal, x_fold_training)+1;
-    end
-end
+no_spks = nansum(spks,1)==0;
+no_spks_rand = nansum(spks_rand,1)==0;
+no_spks = no_spks';
+no_spks_rand = no_spks_rand';
+
+test_inds = splits_equal_occupancy(str_in.var_binned, str_in.counts, x_fold_training);
+% % % odd_ind = [];
+% % % split_equal = 1;
+% % % for i = 1:length(str_in.counts)
+% % %     ind = find(str_in.var_binned==i);
+% % %     [~, randord] = sort(rand(length(ind),1));
+% % %     ind = ind(randord);
+% % %     if mod(length(ind), 2) == 1
+% % %         % this is to keep the last split value from always geting one extra
+% % %         % when there's an odd number
+% % %         odd_ind = ind(end);
+% % %         ind = ind(1:end-1);
+% % %     else
+% % %         odd_ind = [];
+% % %     end
+% % %     if ~isempty(ind)
+% % %         xi = floor(linspace(0, length(ind), x_fold_training+1));
+% % %         for j = 1:x_fold_training
+% % %             test_inds(ind(xi(j)+1:xi(j+1))) = j;
+% % %         end
+% % %     end
+% % %     if ~isempty(odd_ind)
+% % %         test_inds(odd_ind) = split_equal;
+% % %         split_equal = mod(split_equal, x_fold_training)+1;
+% % %     end
+% % % end
 str_in.test_inds = test_inds;
 %%%% Construct the weights based on inverse frequency
 sample_weights = 1 - (str_in.counts./sum(str_in.counts));
@@ -81,8 +87,6 @@ for i = 1:length(str_in.counts)
     ind = str_in.var_binned==i;
     str_in.weights(ind) = wmat(ind, i);
 end
-no_spks = nansum(spks,1)==0;
-no_spks_rand = nansum(spks_rand,1)==0;
 %%
 % fprintf('Decoding using xfold=%d;  ', x_fold_training)
 % warning('off', 'stats:fitSVMPosterior:PerfectSeparation')
@@ -97,9 +101,9 @@ svmtemplate = templateSVM('Standardize', false);
 ppm = 0;
 for i = 1:x_fold_training
     % using SVM to decode
-    istesting       = (test_inds==i & no_spks'==false);
-    istraining      = (test_inds~=i & no_spks'==false & train_flag'==true);
-    istesting_rand  = (test_inds==i & no_spks_rand'==false);
+    istesting       = (test_inds==i & no_spks==false);
+    istraining      = (test_inds~=i & no_spks==false & train_flag==true);
+    istesting_rand  = (test_inds==i & no_spks_rand==false);
     train_s         = spks(:, istraining)';
     train_x         = str_in.var_binned(istraining);
     train_w         = str_in.weights(istraining);

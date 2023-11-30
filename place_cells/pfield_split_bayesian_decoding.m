@@ -1,4 +1,4 @@
-function [str] = pfield_split_bayesian_decoding(ms, x, y, spks, pos_bins, cells2use, n_rand)
+function [str] = pfield_split_bayesian_decoding(ms, x, y, spks, xbins, ybins, cells2use, n_rand, bin_int)
 %%
 % spks = ms.spks;
 % x = ms.room.x;
@@ -7,14 +7,14 @@ function [str] = pfield_split_bayesian_decoding(ms, x, y, spks, pos_bins, cells2
 % pos_bins = params.pos_bins;
 
 t = ms.timestamps./1000;
-[spks_bin, ~]        = bin_spks_time(spks,   .25, ms.timestamps./1000, false);
-[x_average, ~]       = average_spks_time(x', .25, ms.timestamps./1000, false, 'mean');
-[y_average, ~]       = average_spks_time(y', .25, ms.timestamps./1000, false, 'mean');
-[time_average, ~]    = average_spks_time(t', .25, ms.timestamps./1000, false, 'mean');
-[~,~,~,x_bin, y_bin] = histcounts2(x_average, y_average, pos_bins, pos_bins);
-% [spdav, ~]       = average_spks_time(spd', .25, ms.timestamps./1000, false, 'median');
-
-[pfield_splits, ~]   = average_spks_time(ms.room.split_vec', .25, ms.timestamps./1000, false, 'mean');
+[spks_bin, ~]        = bin_spks_time(spks,   bin_int, ms.timestamps./1000, false);
+[x_average, ~]       = average_spks_time(x', bin_int, ms.timestamps./1000, false, 'mean');
+[y_average, ~]       = average_spks_time(y', bin_int, ms.timestamps./1000, false, 'mean');
+[time_average, ~]    = average_spks_time(t', bin_int, ms.timestamps./1000, false, 'mean');
+[~,~,~, x_bin, y_bin] = histcounts2(x_average, y_average, xbins, ybins);
+% [spdav, ~]       = average_spks_time(spd', bin_int, ms.timestamps./1000, false, 'median');
+[~,~,~, xbinned, ybinned] = histcounts2(x_average, y_average, xbins, ybins);
+[pfield_splits, ~]   = average_spks_time(ms.room.split_vec', bin_int, ms.timestamps./1000, false, 'mean');
 
 pfield_splits = double(pfield_splits>=median(pfield_splits)) + 1;
 
@@ -26,12 +26,14 @@ n_cells_spiking = sum(spks_bin>0,1);
 goodsegs = cells2use; % ms.room.split_p<=1 & ms.room.pcell_stats.peakRate>0;
 % n_rand = 100;
 
-nbins = length(pos_bins)-1;
+% nbins = length(pos_bins)-1;
+nxbins = length(xbins)-1;
+nybins = length(ybins)-1;
 x_decoded = NaN(length(x_average),1);
 y_decoded = NaN(length(y_average),1);
 x_decoded_shuffle = NaN(length(x_average),n_rand);
 y_decoded_shuffle = NaN(length(y_average),n_rand);
-posterior_probability_map = NaN(nbins, nbins, length(y_average));
+posterior_probability_map = NaN(nybins, nxbins, length(y_average));
 for split_loop = 1:length(unique(pfield_splits))
     if split_loop == 1
         placefields = ms.room.pfields_smooth_split2;
@@ -47,16 +49,23 @@ for split_loop = 1:length(unique(pfield_splits))
     [nsegs,nsamples1] = size(spike_matrix);
     placefields = placefields(goodsegs,:,:);
     
-    linear_pfields = reshape(placefields, [nsegs, nbins^2]);
+    linear_pfields = reshape(placefields, [nsegs, nybins*nxbins]);
     linear_pfields(isnan(linear_pfields)) = 0;
     
     posterior_prob = linear_pfields'*spike_matrix;
     posterior_prob = normalize_cols(posterior_prob);
-    % posterior_prob_submap = posterior_prob;
-    posterior_prob_submap = reshape(posterior_prob, [nbins, nbins, nsamples1]);
+    posterior_prob_submap = reshape(posterior_prob, [nybins, nxbins, nsamples1]);
     [~, pm] = max(posterior_prob, [], 1);
-    [pmy, pmx] = ind2sub([nbins, nbins], pm);
-
+    [pmy, pmx] = ind2sub([nybins, nxbins], pm);
+%     for ijk = 1:2:size(posterior_prob_submap,3)
+%         pp = squeeze(posterior_prob_submap(:,:,ijk));
+%         figure(1); clf
+%         imagesc(pp); hold on
+%         scatter(xbinned(ijk),ybinned(ijk), 50, 'ko', 'MarkerFaceColor', 'k')
+%         scatter(pmx(ijk),pmy(ijk), 60, 'mo')
+%         drawnow
+%         pause(.05)
+%     end
     posterior_probability_map(:,:,validinds) = posterior_prob_submap;
     x_decoded(validinds) = pmx;
     y_decoded(validinds) = pmy;
@@ -68,10 +77,8 @@ for split_loop = 1:length(unique(pfield_splits))
         
         posterior_prob = linear_pfields'*spks1_rand;
         posterior_prob = normalize_cols(posterior_prob);
-        % posterior_prob_submap = posterior_prob;
-        % posterior_prob_submap = reshape(posterior_prob, [nbins, nbins, nsamples1]);
         [~, pm] = max(posterior_prob, [], 1);
-        [randy, randx] = ind2sub([nbins, nbins], pm);
+        [randy, randx] = ind2sub([nybins, nxbins], pm);
         
         x_decoded_shuffle(validinds, j) = randx;
         y_decoded_shuffle(validinds, j) = randy;
@@ -96,6 +103,8 @@ str.decode_dist_shuffle_quant25     = decode_dist_shuffle_quant25;
 str.decode_dist_shuffle_quant75     = decode_dist_shuffle_quant75;
 str.xbin                            = x_bin;
 str.ybin                            = y_bin;
+str.rand_xbin                       = x_decoded_shuffle(:,1);
+str.rand_ybin                       = y_decoded_shuffle(:,1);
 str.xdecoded                        = x_decoded;
 str.ydecoded                        = y_decoded;
 str.posterior_probability_map       = posterior_probability_map;

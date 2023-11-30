@@ -16,34 +16,7 @@ counts = vmap_counts(:)';
 if isfield(struct_in, 'splits')
     splits = struct_in.splits;
 else
-    splits = NaN(length(xbin),1);
-    odd_ind = [];
-    split_equal = 1;
-    % ux = unique(counts);
-    for i = 1:length(counts)
-        %     ind = find(var_binned==ux(i));
-        ind = find(var_binned==i);
-        [~, ranord] = sort(rand(length(ind),1));
-            ind = ind(ranord);
-        if mod(length(ind), 2) == 1
-            % this is to keep the last split value from always geting one extra
-            % when there's an odd number
-            odd_ind = ind(end);
-            ind = ind(1:end-1);
-        else
-            odd_ind = [];
-        end
-        if ~isempty(ind)
-            xi = floor(linspace(0, length(ind), nsplits+1));
-            for j = 1:nsplits
-                splits(ind(xi(j)+1:xi(j+1))) = j;
-            end
-        end
-        if ~isempty(odd_ind)
-            splits(odd_ind) = split_equal;
-            split_equal = mod(split_equal, nsplits)+1;
-        end
-    end
+    splits = splits_equal_occupancy(var_binned, counts, nsplits);
 end
 % splits = uint8(mod(cumsum(dt)./ceil(sum(dt)/(nsplits/2)), 1)<.5);
 % splits(splits==0) = 2;
@@ -73,6 +46,7 @@ smoothing_kern = smoothing_kern./(sum(smoothing_kern(:)));
 vmap(vmap<occupancy_thresh) = NaN;
 vmap1(vmap1<occupancy_thresh/2) = NaN;
 vmap2(vmap2<occupancy_thresh/2) = NaN;
+plotting = false;
 for i = 1:nsegs
     %%
     % generate the spk map
@@ -115,7 +89,7 @@ for i = 1:nsegs
     pfields_smooth_split1(i,:,:) = p1smooth;
     pfields_smooth_split2(i,:,:) = p2smooth;
     %     pfields_smooth(i,:,:) = conv2(smap./vmap, smoothing_kern, 'same');
-    if false % for plotting and checking
+    if plotting == true % for plotting and checking
         
         ps = squeeze(pfields_smooth(i,:,:));
         if any(~bads(:))

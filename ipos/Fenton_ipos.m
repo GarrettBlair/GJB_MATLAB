@@ -1,15 +1,16 @@
-function [momentary_pos_info, sub_str, ensemble_prob_min, ensemble_prob_av] = Fenton_ipos(ms, integration_time, frame_string, params)
+function [momentary_pos_info, sub_str, ensemble_prob_min, ensemble_prob_av, p_x] = Fenton_ipos(ms, integration_time, frame_string, params)
 % integration_time = .1; % time in seconds to bin activity
 % spks_all = normalize_rows(ms.neuron.S_matw);
 plotting = false;
 tic
+
 if any(strfind(frame_string, 'polar'))
-    binsx = params.theta_bins;
+    binsx = params.yaw_bins;
     binsy = params.rho_bins;
-    if strcmp(frame_string, 'room')
+    if contains(frame_string, 'room')
         xo = ms.room.x;
         yo = ms.room.y;
-    elseif strcmp(frame_string, 'arena')
+    elseif contains(frame_string, 'arena')
         xo = ms.arena.x;
         yo = ms.arena.y;
     end
@@ -25,11 +26,23 @@ else % euclidean
         yo = ms.arena.y;
     end
 end
+spks = ms.spks>0;
 dt = ms.dt;
 to = ms.timestamps./1000;
+if isfield(ms, 'goodFrames') && any(~ms.goodFrames)
+    if (length(xo)~=sum(ms.goodFrames) || size(spks,2)~=sum(ms.goodFrames))
+    fprintf('\n Ipos - downsample frames to good frames \n\t\t\t(removing %d) \n', sum(~ms.goodFrames))
+    f = ms.goodFrames;
+    xo = xo(f); yo = yo(f); to = to(f);
+    spks = spks(:, f);
+    dt = dt(f); 
+    end    
+%     valid_frames = 1:size(spks,2); % ms.good_frames
+end
+baddt = (dt./median(dt)) >= 3;
+dt(baddt) = 3*median(dt);
 
-spks = ms.spks>0;
-[spks_bin, group] = bin_spks_time(spks, integration_time, ms.timestamps./1000, false);
+[spks_bin, group] = bin_spks_time(spks, integration_time, to, false);
 
 spks_bin = round(spks_bin);
 max_n_spks1 = 0;%ceil(size(spks, 2)/size(spks_bin,2));
@@ -47,10 +60,10 @@ end
 occupancy_thresh = params.occupancy_thresh;
 
 
-x_av = average_spks_time(xo', integration_time, ms.timestamps./1000, false, 'mean');
-y_av = average_spks_time(yo', integration_time, ms.timestamps./1000, false, 'mean');
-t_av = average_spks_time(to', integration_time, ms.timestamps./1000, false, 'mean');
-[dt_av, grouped_time] = bin_spks_time(dt', integration_time, ms.timestamps./1000, false);
+x_av = average_spks_time(xo', integration_time, to, false, 'mean');
+y_av = average_spks_time(yo', integration_time, to, false, 'mean');
+t_av = average_spks_time(to', integration_time, to, false, 'mean');
+[dt_av, grouped_time] = bin_spks_time(dt', integration_time, to, false);
 
 % ipos_timestamps = t_av;
 
@@ -63,7 +76,7 @@ nbinsy = length(binsy)-1;
 % xbin(xbin==0) = interp1(find(xbin~=0), xbin(xbin~=0), find(xbin==0), 'nearest', 'extrap');
 % ybin(ybin==0) = interp1(find(ybin~=0), ybin(ybin~=0), find(ybin==0), 'nearest', 'extrap');
 % [vmap_o, ~, xbino, ybino]   = make_occupancymap_2D(xo, yo, dt, bins, bins);
-[nsegs, nsamples] = size(spks_bin);
+[nsegs, numSamples] = size(spks_bin);
 
 vmap(countmap<1) = NaN;
 vmap(vmap<occupancy_thresh) = NaN;
@@ -82,7 +95,6 @@ sub_str.vmap    = vmap;
 sub_str.spks_bin_group    = group;
 %%
 momentary_pos_info = NaN(size(spks_bin));
-valid_frames = 1:size(spks_bin,2); % ms.good_frames
 
 
 plotting=false;%true
@@ -90,8 +102,6 @@ if plotting==true
     figure(99); clf;
     set(gcf, 'Position', [200   359   900   341])
 end
-% 93
-
 for i = 1:nsegs
     %%
     % generate the conditional probability maps for each n spikes
@@ -104,9 +114,9 @@ for i = 1:nsegs
         sm = spks_bin(i, :);
 %         [smap] = make_summap_2D(x_av,  y_av,  sm, bins, bins);
 %         [mi, ir] = infoSkaggs(smap, vmap)
-        if any(sm==spikeval)
             smb = sm==spikeval;%(sm~=ii) = NaN;
-            smb_prob(spikeval+1) = sum(smb)/length(smb);
+        if any(smb)
+            smb_prob(spikeval+1) = sum(smb)/numSamples;
             [smap] = make_probabilitymap_2D(x_av,  y_av,  smb, binsx, binsy);
             smap(isnan(vmap)) = NaN;
             smap_prob(spikeval+1,:,:) = smap;
@@ -131,15 +141,14 @@ for i = 1:nsegs
     end
     % extract the probability of every time sample based on location and
     % spike number
-    for j = 1:length(xbin)
-        nspks_ind = spks_bin(i,j) + 1;
-        p_ix = smap_prob(nspks_ind, ybin(j), xbin(j));
-        ttt = smap_prob(:, ybin(j), xbin(j));
-        ttt= ttt/nansum(ttt);
-        p_ix = ttt(nspks_ind);
-        p_i = smb_prob(nspks_ind);
-        px = prob_vmap(ybin(j), xbin(j));
-        momentary_pos_info(i, j) = px * p_ix * log2( p_ix / p_i  );
+    for j = 1:numSamples
+        if ~isnan(prob_vmap(ybin(j), xbin(j)))
+            nspks_ind = spks_bin(i,j) + 1;
+            p_ix = smap_prob(nspks_ind, ybin(j), xbin(j));
+            p_i = smb_prob(nspks_ind);
+            px = 1; % p_x has a large effect and is already in p_ix 
+            momentary_pos_info(i, j) = px * p_ix * log2( p_ix / p_i  );
+        end
     end
     if plotting==true % for plotting and checking
         subplot(2,1,2); cla
@@ -160,9 +169,10 @@ plotting = false;
 % ensemble_dist_mat = squareform(pdist(spks_bin', 'cosine'));
 % ensemble_dist_mat = squareform(pdist(spks_bin', 'mahalanobis'));
 ensemble_dist_mat = squareform(pdist(spks_bin', 'euclidean'));
-ensemble_dist_mat(find(eye(nsamples))) = NaN;
-ensemble_prob_min = NaN(nsamples, 1);
-ensemble_prob_av = NaN(nsamples, 1);
+ensemble_dist_mat(find(eye(numSamples))) = NaN;
+ensemble_prob_min = NaN(numSamples, 1);
+ensemble_prob_av = NaN(numSamples, 1);
+p_x = NaN(numSamples, 1);
 if params.skip_ensemble ~= true
 current_bin_prob = NaN(nbinsy, nbinsx);
 
@@ -170,33 +180,36 @@ for i=1:nbinsx
     for j = 1:nbinsy
         if isnan(vmap(j,i))==false % any(j==ybin & i==xbin)
             currentbin = i==xbin & j==ybin;
-            current_bin_prob(j,i) = sum(currentbin)/length(currentbin);
-            if sum(currentbin)>2
+            current_bin_prob(j,i) = sum(currentbin)/numSamples;
+            numThisBin = sum(currentbin);
+            if numThisBin>2
 %                 ensemble_dist_mat_pos = squareform(pdist(spks_bin(:, currentbin)', 'cosine')); % euclidean
                 ensemble_dist_mat_pos = squareform(pdist(spks_bin(:, currentbin)', 'euclidean')); % euclidean
-                ensemble_dist_mat_pos(find(eye(sum(currentbin)))) = NaN;
+                ensemble_dist_mat_pos(find(eye(numThisBin))) = NaN;
                 binInd = find(currentbin);
                 
-                for binLoop = 1:sum(currentbin)
+                for binLoop = 1:numThisBin
                     alldists = ensemble_dist_mat(binInd(binLoop),:);
-                    alldists = alldists(setdiff(1:size(spks_bin, 2), binInd(binLoop)));
+                    alldists = alldists(setdiff(1:numSamples, binInd(binLoop)));
                     min_dist_all = nanmin(alldists);
                     av_dist_all  = nanmedian(alldists);
                     
                     thisdists = ensemble_dist_mat_pos(binLoop,:);
-                    thisdists = thisdists(setdiff(1:sum(currentbin), binLoop));
+                    thisdists = thisdists(setdiff(1:numThisBin, binLoop));
                     
                     min_dist_thisbin = nanmin(thisdists);
                     av_dist_thisbin  = nanmedian(thisdists);
                     
-                    px = current_bin_prob(j,i);
-                    ps_x = sum(min_dist_thisbin<=ensemble_dist_mat_pos(:)) ./ (sum(currentbin)^2);
-                    ps = sum(min_dist_all<=ensemble_dist_mat(:)) ./ (size(spks_bin, 2)^2);
+                    px = 1; % current_bin_prob(j,i);
+                    ps_x = sum(min_dist_thisbin<=ensemble_dist_mat_pos(:)) ./ (numThisBin^2);
+                    ps = sum(min_dist_all<=ensemble_dist_mat(:)) ./ (numSamples^2);
                     ensemble_prob_min(binInd(binLoop)) = px * ps_x * log2( ps_x / ps );
                     
-                    ps_x = sum(av_dist_thisbin<=ensemble_dist_mat_pos(:)) ./ (sum(currentbin)^2);
-                    ps = sum(av_dist_all<=ensemble_dist_mat(:)) ./ (size(spks_bin, 2)^2);
+                    ps_x = sum(av_dist_thisbin<=ensemble_dist_mat_pos(:)) ./ (numThisBin^2);
+                    ps = sum(av_dist_all<=ensemble_dist_mat(:)) ./ (numSamples^2);
                     ensemble_prob_av(binInd(binLoop))  = px * ps_x * log2( ps_x / ps );
+                    
+                    p_x(binInd(binLoop)) = px;
                 end
             end
         end
@@ -204,16 +217,4 @@ for i=1:nbinsx
 end
 
 end
-% figure(4); clf; hold on;
-% yyaxis('left')
-% % plot(nanmean(momentary_pos_info,1));
-% mtrace = nansum(abs(momentary_pos_info),1);
-% mtrace = nanmean((momentary_pos_info),1);
-% plot(mtrace);
-% yyaxis('right')
-% plot(ensemble_prob)
-% 
-% 
-% figure; plot3(xbin, ybin, mtrace);
-% figure; plot3(xbin, ybin, ensemble_prob);
-% % drawnow
+
