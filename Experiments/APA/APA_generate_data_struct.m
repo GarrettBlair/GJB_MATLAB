@@ -59,7 +59,7 @@ if isfile(room_tracking_fname) && isfile(arena_tracking_fname)
 %     [ms, behav, behav_params] = behavior_python_CSV_file(ms, fname_position, fname_params);
 %     params_sub.behav_params = behav_params;
 else
-    warning('No extracted behavior data:\n\t %s', room_tracking_fname);
+    error('No extracted behavior data:\n\t %s', room_tracking_fname);
     behav = [];
     behav_params = [];
 end

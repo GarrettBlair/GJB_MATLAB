@@ -3,13 +3,14 @@ function [sumspks, grouped_time] = bin_spks_time(spks, time_res, time_vec, slidi
 [nsegs, nsamples] = size(spks);
 [d1, d2] = size(time_vec);
 if nsegs>nsamples % && (nsegs>1 && nsamples>1)
-    warning('Input dimensions appear wrong; expected segs x time, but time<segs')
-    spks = spks';
-    [nsegs, nsamples] = size(spks);
+%     warning('Input dimensions appear wrong; expected segs x time, but time<segs')
+%     spks = spks';
+%     [nsegs, nsamples] = size(spks);
 end
 if d2 ~= nsamples && d1 == nsamples 
     time_vec = time_vec';
 end
+grouped_time = [0 cumsum(diff(mod(time_vec, time_res))<0)];
 if sliding_method == true
     %%%% Compute summation with sliding bins
     sumspks = NaN(nsegs, nsamples);
@@ -24,13 +25,13 @@ if sliding_method == true
     end
 else
     %%%% Compute summation with fixed bins, no sliding
-    grouped_time = [1 cumsum(diff(mod(time_vec, time_res))<0)];
     nsub = max(grouped_time); % floor(nsamples/window_size)+1;
+    
     % first calc the number of spikes within the time resolution window time_res
     last_group = find(nsub == grouped_time);
     last_group_duration = time_vec(last_group(end)) - time_vec(last_group(1));
     % Check how long the final bin is. If < half the time res, omit it
-    if last_group_duration < time_res/4 % tvec(end)-tvec(end-1) < window_size/2
+    if last_group_duration < time_res % /4 %
         %         warning('Last bin too small to include, skipping')
         nsub = nsub-1;
     end

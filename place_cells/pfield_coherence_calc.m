@@ -8,7 +8,8 @@ for c1 = 1:nbins1
         rind = rind(rind>0 & rind<=nbins1);
         cind = c2+[-1 -1 -1  0 0  1 1 1];
         cind = cind(cind>0 & cind<=nbins2);
-        b = nanmean(nanmean(squeeze(pfields(:,cind,rind)), 2), 3);
+%         b = nanmean(nanmean(squeeze(pfields(:,cind,rind)), 2), 3);
+        b = nanmean(nanmean((pfields(:,cind,rind)), 2), 3);
         neighbor_av_r(:,c2,c1) = b;
     end
 end

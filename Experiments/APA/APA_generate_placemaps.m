@@ -28,16 +28,16 @@ full_splits(find(is_moving)) = ms.arena.pfield_split_vec;
 full_splits(find(~is_moving)) = uint8(interp1(find(is_moving), double(ms.arena.pfield_split_vec), find(~is_moving), 'nearest'));
 ms.arena.split_vec = full_splits;
 
-[ms.room.pfield_decode]  = pfield_split_bayesian_decoding(ms, ms.room.x,  ms.room.y,  spks, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode, params.ipos_int_time);
-[ms.arena.pfield_decode] = pfield_split_bayesian_decoding(ms, ms.arena.x, ms.arena.y, spks, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode, params.ipos_int_time);
+[ms.room.pfield_decode]  = pfield_split_bayesian_decoding(ms, ms.room.x,  ms.room.y,  spks, params.pos_bins, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode, params.ipos_int_time);
+[ms.arena.pfield_decode] = pfield_split_bayesian_decoding(ms, ms.arena.x, ms.arena.y, spks, params.pos_bins, params.pos_bins, 1:size(spks,1), params.num_random_shuffle_decode, params.ipos_int_time);
 
 
-[ms.head_ori]   = construct_place_maps_1D(ms.head_ori,   ms.ori.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), params.yaw_bin, params);
+[ms.head_ori]   = construct_place_maps_1D(ms.head_ori,   ms.ori.yaw(is_moving), ms.dt(is_moving), spks(:, is_moving), params.yaw_bins, params);
 
 [ms.arena.pcell_stats] = place_cell_stats(spks, ms.arena.pfields_smooth, ms.arena.spkmap_smooth, ms.arena.vmap);
 [ms.room.pcell_stats]  = place_cell_stats(spks, ms.room.pfields_smooth,  ms.room.spkmap_smooth,  ms.room.vmap);
 
-
+%%
 if isfield(params, 'num_random_shuffle_pcell')
     nrand = params.num_random_shuffle_pcell;
     ms.arena.pcell_stats.infoPerSpike_rand = NaN(nsegs, nrand);

@@ -3,7 +3,7 @@ function [momentary_pos_info, sub_str, ensemble_prob_min, ensemble_prob_av, p_x]
 % spks_all = normalize_rows(ms.neuron.S_matw);
 plotting = false;
 tic
-max_n_spks = 10;% # bins for spiking
+max_n_spks = ceil(integration_time/ median(ms.dt))+1; %10;% # bins for spiking
 
 if any(strfind(frame_string, 'polar'))
     binsx = params.yaw_bins;
@@ -12,7 +12,8 @@ else % euclidean
     binsx = params.pos_bins;
     binsy = params.pos_bins;
 end
-
+% spksin = ms.spks;
+% ms.spks = ms.spks>0;
 [sub_str] = bin_session_data(ms, integration_time, frame_string, params);
 if any(strfind(frame_string, 'polar'))
 %     x_av = sub_str.theta;
@@ -77,10 +78,15 @@ for i = 1:nsegs
     for j = 1:numSamples
         if ~isnan(vmap(ybin(j), xbin(j)))
             nspks_ind = s_bin(j);
+            smap = squeeze(smap_prob(nspks_ind,:,:));
             p_ix = smap_prob(nspks_ind, ybin(j), xbin(j));
             p_i = smb_prob(nspks_ind);
             px = 1; % p_x has a large effect and is already in p_ix 
-            momentary_pos_info(i, j) = px * p_ix * log2( p_ix / p_i  );
+            mpi = px * p_ix * log2( p_ix / p_i  );
+            if j==1254
+                drawnow
+            end
+            momentary_pos_info(i, j) = mpi;
         end
     end
     end
@@ -103,6 +109,7 @@ plotting = false;
 % ensemble_dist_mat = squareform(pdist(spks_bin', 'cosine'));
 % ensemble_dist_mat = squareform(pdist(spks_bin', 'mahalanobis'));
 if params.skip_ensemble == false
+warning('off', 'stats:pdist:ZeroPoints')
 ensemble_dist_mat = squareform(pdist(spks_bin', 'cosine'));
 ensemble_dist_mat(find(eye(numSamples))) = NaN;
 ensemble_prob_min = NaN(numSamples, 1);

@@ -22,20 +22,20 @@ if sliding_method == true
     end
 else
     %%%% Compute summation with fixed bins, no sliding
-    try
-    grouped_time = [1; cumsum(diff(mod(time_vec, time_res))<0)];
-    catch
-    grouped_time = [1  cumsum(diff(mod(time_vec, time_res))<0)];
+    time_vec = time_vec - time_vec(1);
+    nt = ceil(time_vec(end)/time_res);
+    grouped_time = time_vec*NaN;
+    for i = 1:nt
+        inds = find(time_vec>=(i-1)*time_res & time_vec<(i)*time_res); 
+        grouped_time(inds) = i;
     end
-    nsub = max(grouped_time); % floor(nsamples/window_size)+1;
-    % first calc the number of spikes within the time resolution window time_res
-    last_group = find(nsub == grouped_time);
-    last_group_duration = time_vec(last_group(end)) - time_vec(last_group(1));
-    % Check how long the final bin is. If < half the time res, omit it
-    if last_group_duration < time_res/4 % tvec(end)-tvec(end-1) < window_size/2
-        %         warning('Last bin too small to include, skipping')
-        nsub = nsub-1;
-    end
+
+%     try
+%     grouped_time = [0; cumsum(diff(mod(time_vec, time_res))<=0)];
+%     catch
+%     grouped_time = [0  cumsum(diff(mod(time_vec, time_res))<=0)];
+%     end
+    nsub = nt; %max(grouped_time); % floor(nsamples/window_size)+1;
     averagespks = NaN(nsegs, nsub);
     for i = 1:nsub
         switch average_method

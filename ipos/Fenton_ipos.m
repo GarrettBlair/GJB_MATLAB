@@ -42,7 +42,8 @@ end
 baddt = (dt./median(dt)) >= 3;
 dt(baddt) = 3*median(dt);
 
-[spks_bin, group] = bin_spks_time(spks, integration_time, to, false);
+% [spks_bin, group] = bin_spks_time(spks, integration_time, to, false);
+[spks_bin, group] = average_spks_time(spks, integration_time, to, false, 'sum');
 
 spks_bin = round(spks_bin);
 max_n_spks1 = 0;%ceil(size(spks, 2)/size(spks_bin,2));
@@ -63,7 +64,8 @@ occupancy_thresh = params.occupancy_thresh;
 x_av = average_spks_time(xo', integration_time, to, false, 'mean');
 y_av = average_spks_time(yo', integration_time, to, false, 'mean');
 t_av = average_spks_time(to', integration_time, to, false, 'mean');
-[dt_av, grouped_time] = bin_spks_time(dt', integration_time, to, false);
+% [dt_av, grouped_time] = bin_spks_time(dt', integration_time, to, false);
+[dt_av, ~] = average_spks_time(dt', integration_time, to, false, 'sum');
 
 % ipos_timestamps = t_av;
 

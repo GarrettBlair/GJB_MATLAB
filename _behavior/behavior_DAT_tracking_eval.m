@@ -109,8 +109,20 @@ for strLoop = 1:length(strnames)
     behav.speed = sqrt(diff([x(1); x]).^2 + diff([y(1); y]).^2)./behav_dt;
     behav.speed(1) = behav.speed(2);
     
-    behav.entrance_start_idx = find(behav.State(1:end-1)==1 & behav.State(2:end)==2); % 1 == Entrance latency
+    behav.entrance_start_idx = find(behav.State(1:end-1)==1 & behav.State(2:end)==2) + 1; % 1 == Entrance latency
+    lostinds = find(behav.State(1:end-1)==5 & behav.State(2:end)==2) + 1; % 5 == lost tracking
+    for jjj = 1:length(lostinds)
+        % this ensures that inteval latency lost tracking is not counted as
+        % a new entrance
+        prevStates = behav.State( lostinds(jjj)-100:lostinds(jjj)-1 );
+        prevStates = prevStates(prevStates~=5); % look at the previous states before loss
+        if ~isempty(prevStates) && prevStates(end) == 1
+            behav.entrance_start_idx(end+1) = lostinds(jjj);
+        end
+    end
+    behav.entrance_start_idx = sort(behav.entrance_start_idx, 'ascend');
     behav.shock_start_idx = find(diff([behav.State(1); behav.State] == 2)==1); % 2 == Shock on
+%     behav.shock_start_idx = find(behav.CurrentLevel(1:end-1)==0 & behav.CurrentLevel(2:end)>0 ) + 1; % 2 == Shock on
     
     behav.num_entrances = length(behav.entrance_start_idx);
     behav.num_shocks = length(behav.shock_start_idx);

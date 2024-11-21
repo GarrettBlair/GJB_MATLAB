@@ -5,21 +5,28 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
     animal_DAT_str   = sprintf('%s%s_', DAT_Dir, animal_name);
     if ~isempty(miniscopeName)
         pcellString     = sprintf('@placecells_%s.mat', miniscopeName);
-        spikeFileString = sprintf('@spikes_%s.mat', miniscopeName);
+%         spikeFileString = sprintf('@spikes_%s.mat', miniscopeName);
+        simpleFileString = sprintf('@placecells_%s.mat', miniscopeName);
         contourString   = sprintf('@contours_%s.mat', miniscopeName);
     else
         miniscopeName = 'MiniLFOV';
         pcellString = '@placecells.mat';
-        spikeFileString = '@spikes.mat';
+%         spikeFileString = '@spikes.mat';
+        simpleFileString = '@placecells.mat';
         contourString = 'contours.mat';
     end
     processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
     if isempty(dir(processedDir)) == true
         mkdir(processedDir)
     end
-    spikeFileDir        = sprintf('%s%s/processed_files/spikeFiles/', experiment_folder, animal_name);
-    if isempty(dir(spikeFileDir)) == true
-        mkdir(spikeFileDir)
+%     spikeFileDir        = sprintf('%s%s/processed_files/spikeFiles/', experiment_folder, animal_name);
+%     if isempty(dir(spikeFileDir)) == true
+%         mkdir(spikeFileDir)
+%     end
+    simpleFileDir        = sprintf('%s%s/simple_files/', experiment_folder, animal_name);
+    if isempty(dir(simpleFileDir)) == true
+        fprintf('\n\n DIR MADE - %s \n\n', simpleFileDir)
+        mkdir(simpleFileDir)
     end
     contourDir          = sprintf('%s%s/matching_contours/', experiment_folder, animal_name);
     if isempty(dir(contourDir)) == true
@@ -44,7 +51,8 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
             end
             Sessname        = strcat(Sessname(1:s1-1), '_H', Sessname(s1+1:end));
             alt_pcellName   = strcat(Sessname, '_', pcellString);
-            spikeFileName   = strcat(Sessname, '_', spikeFileString);
+%             spikeFileName   = strcat(Sessname, '_', spikeFileString);
+            simpleFileName   = strcat(Sessname, '_', simpleFileString);
             contourFileName = strcat(Sessname, '_', contourString);
             % setup the filenames, full path
             tracking_room    = sprintf('%s%s_Room.dat', animal_DAT_str, SessType);
@@ -52,7 +60,8 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
             behavior_saveFile    = sprintf('%sexperiment/%s_@behavior_%s.mat', recording_dir, Sessname, miniscopeName);
             placecellFile   = sprintf('%sexperiment/%s', recording_dir, alt_pcellName);
             processedFile   = sprintf('%s%s', processedDir,  alt_pcellName);
-            spikeFile       = sprintf('%s%s', spikeFileDir,  spikeFileName);
+%             spikeFile       = sprintf('%s%s', spikeFileDir,  spikeFileName);
+            simpleFile       = sprintf('%s%s', simpleFileDir,  simpleFileName);
             contourFile     = sprintf('%s%s', contourDir,  contourFileName);
             % pass the filenames to the data structure
             out_struct.SessionDir{sessionLoop, 1}           = temp.SessionDir{sessionLoop, 1};
@@ -65,7 +74,8 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
             out_struct.behaviorFile{sessionLoop, 1}         = behavior_saveFile;
             out_struct.placecellFile{sessionLoop, 1}        = placecellFile;
             out_struct.processedFile{sessionLoop, 1}        = processedFile;
-            out_struct.spikeFile{sessionLoop, 1}            = spikeFile;
+%             out_struct.spikeFile{sessionLoop, 1}            = spikeFile;
+            out_struct.simpleFile{sessionLoop, 1}            = simpleFile;
             out_struct.contourFile{sessionLoop, 1}          = contourFile;
             if isfolder(recording_dir)==1
                 out_struct.ispath(sessionLoop, 1)           = true;

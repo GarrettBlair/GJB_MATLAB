@@ -51,7 +51,6 @@ if ~isempty(params.reuse_contour_crop)
     prev_judgement = load(tempCropName, 'valid_contour_bounds');
     else
         prev_judgement = [];
-        
     end
     if isfield(prev_judgement, 'valid_contour_bounds')
         valid_contour_bounds = prev_judgement.valid_contour_bounds;

@@ -1,11 +1,10 @@
 %% USED PARAMS FOR MOUSE PKMZ APA IMAGING EXPTS
-this_params_ver = 'v2.01';
+this_params_ver = 'v2.1';
 
 params = [];
 params.arena_radius             = 20; % in cm
 params.arena_center             = [ 127.5, 127.5]; % pixel center of behav cam, [x,y]
 params.pixpercm                 = 6.25; % pixel radius of behav cam env
-% warning('check mouse pix/cm')
 params.behav_fps                = 30;
 params.behav_smoothing_interval = .25; % in seconds, length of smoothing kernel
 
@@ -42,6 +41,7 @@ params.cameraName               = {'HPC_miniscope1'};%, 'ACC_miniscope2'}; % wil
 params.reuse_contour_crop       = 'bounding_box.mat'; % use the previous ms file contour crop, unless empty
 
 params.parfor_progbar           = false; % whether to show the parfor progress figure
+params.polar_decode             = false; % whether to use polar coords for svm decoding
 params.skip_ensemble            = false; % flag to skip ensemble ipos calc
 
 

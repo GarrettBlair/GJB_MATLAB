@@ -2,7 +2,8 @@
 % mc_name = "E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\msCam_MC.tiff";
 clear
 %%%%%%%% first retrieval 8
-dirrr = {'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\',...
+dirrr = {'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_07_25\17_44_28_TR7\HPC_miniscope1\',...
+    'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_13\16_28_05_HC9\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_13\17_35_20_RET10\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_13\17_51_12_CON11\HPC_miniscope1\',...
@@ -10,7 +11,8 @@ dirrr = {'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_15\15_16_02_CON16\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_15\16_28_51_HC17\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_16\12_19_41_CON18\HPC_miniscope1\',...%%%%
-    'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_12\17_39_31_RET8\HPC_miniscope1\',...%%%%
+    'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_07_25\17_11_23_TR7\HPC_miniscope1\',...%%%%
+    'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_12\17_39_31_RET8\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_13\16_57_02_HC9\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_13\18_35_09_RET10\HPC_miniscope1\',...
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_13\18_46_02_CON11\HPC_miniscope1\',...
@@ -20,10 +22,10 @@ dirrr = {'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_
     'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23459\2023_08_16\12_46_12_CON18\HPC_miniscope1\'};
 
 ndir = length(dirrr);
-roi_perc = NaN(ndir,1);
 %%
 videoPlotting = false;
-
+%%%%%% evaluates ca waves
+if false
 for dirLoop = 1:ndir
     dirrr{dirLoop}
     Y = load_tiffstack([dirrr{dirLoop} 'msCam_MC_cawaves.tiff']);
@@ -190,26 +192,68 @@ for dirLoop = 1:ndir
     save(data_name, 'cx', 'cy', 'spd', 'area', 'pm', 'fs', 'dirrr')
     
 end %%%%%%%%%%%%%%%%%%%%%%%
+end
+%% LOAD IT
+roi_perc = NaN(ndir,1);
+roi1 = NaN(ndir,1);
+roi2 = NaN(ndir,1);
+for dirLoop = 1:ndir
+    %%
+    data_name = [dirrr{dirLoop} 'ca_waves.mat'];
+    disp(data_name)
+    load(data_name, 'cx', 'cy', 'spd', 'area', 'pm', 'fs', 't');
+    nf = length(fs);
+    active_roi = nanmax(area,[],2)>0;
+    roi_perc(dirLoop) = nanmean(active_roi);
+    split = find(t >= t(end)/2, 1);
+    roi1(dirLoop) = nanmean(active_roi(1:split));
+    roi2(dirLoop) = nanmean(active_roi(split+1:end));
+%     figure; plot(t, active_roi); title(sprintf('%% ROI = %3.3f',100*nanmean(nanmax(area,[],2)>0))); 
+%     title(data_name(44:77), 'Interpreter', 'none')
+    axis tight
+    drawnow    
+end %%%%%%%%%%%%%%%%%%%%%%%
+roi_perc = [roi_perc(1:9), roi_perc(10:18)];
+roi1 = [roi1(1:9), roi1(10:18)];
+roi2 = [roi2(1:9), roi2(10:18)];
 %%
 % temp = regionprops3(yim, 'Image', 'Centroid')
-names = {'RET' 'HC' 'RET' 'CON' 'HC' 'CON' 'HC' 'CON'};
-pos = [1:8 1:8];
+names = {'TR' 'RET' 'HC' 'RET' 'CON' 'HC' 'CON' 'HC' 'CON'};
 figure(38); clf; hold on
-plot([0 9], [0 0], 'k', 'LineWidth', 1)
-plot(2:4, roi_perc(10:12), '-k', 'LineWidth', 2)
-plot(5:7, roi_perc(13:15), '-k', 'LineWidth', 2)
-plot(1:8, roi_perc(9:16), 'o--k')
-plot(2:4, roi_perc(2:4), '-b', 'LineWidth', 2)
-plot(5:7, roi_perc(5:7), '-b', 'LineWidth', 2)
-plot(1:8, roi_perc(1:8), 'o--b')
+% plot([0 9], [0 0], 'k', 'LineWidth', 1)
+% plot(2:4, roi_perc(10:12), '-k', 'LineWidth', 2)
+% plot(5:7, roi_perc(13:15), '-k', 'LineWidth', 2)
+% plot(1:8, roi_perc(9:16), 'o--k')
+% plot(2:4, roi_perc(2:4), '-b', 'LineWidth', 2)
+% plot(5:7, roi_perc(5:7), '-b', 'LineWidth', 2)
+% plot(1:8, roi_perc(1:8), 'o--b')
+% plot([0 10], [0 0], 'k', 'LineWidth', 1)
+plot(1:9, roi_perc(:,1), '-bo', 'LineWidth', 2)
+plot(1:9, roi_perc(:,2), '-ko', 'LineWidth', 2)
 ylabel('Prop. frames with ROI detected')
 xlabel('Session (connected are same day)')
-title('\color{blue}mHPC23454, \color{black}mHPC23459')
+title('\color{black}mHPC23459, \color{blue}mHPC23454')
 
-axis([ .5 8.5 -.1 .6])
-set(gca, 'XTick', 1:8, 'XTickLabels', names)
+axis([ .5 9.5 -.1 .6])
+set(gca, 'XTick', 1:9, 'XTickLabels', names)
+
+
+% d1 = ( roi1(:,1)-roi2(:,1) ) ./ (roi1(:,1)+roi2(:,1));
+% d2 = ( roi1(:,2)-roi2(:,2) ) ./ (roi1(:,2)+roi2(:,2));
+% figure(39); clf; hold on
+% plot([0 10], [0 0], 'k', 'LineWidth', 1)
+% plot(1:9, d1, '-bo', 'LineWidth', 2)
+% plot(1:9, d2, '-ko', 'LineWidth', 2)
+% ylabel('Prop. frames with ROI detected')
+% xlabel('Session (connected are same day)')
+% axis([ .5 9.5 -1.2 1.2])
+% title('\color{black}mHPC23459, \color{blue}mHPC23454')
+% set(gca, 'XTick', 1:9, 'XTickLabels', names)
+
+
 %%
-
+% Need to refine foci identification to remove jumps and keep identity
+% consistent
 [nt, nd] = size(cx);
 reach = 2;
 
@@ -306,3 +350,70 @@ for i = 1:4:nf2
     title(i)
     drawnow; 
 end
+
+%% Examples showing ca wave spreading depression for grant
+
+tiffname1 = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\msCam_MC.tiff';
+tiffname2 = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\msCam_MC_cawaves.tiff';
+temp = readtable('E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\timestamps.csv');
+ca = load('E:\RecordingData\GarrettBlair\PKCZ_imaging\mHPC23454\2023_08_12\16_55_19_RET8\HPC_miniscope1\ca_waves.mat');
+t = temp.TimeStamp_ms_./1000;
+%%
+startf = 22130; % 22142;
+t0 = t(startf);
+tstep = 2;
+tind = [startf, find(t>=t0+1*tstep,1), find(t>=t0+2*tstep,1), find(t>=t0+3*tstep,1)];
+tall = [t(tind)]-t0;
+x = ca.cx(tind);
+y = ca.cy(tind);
+%%
+zooms = [90, 90+120, 96, 96+120];
+figure(1); clf; colormap bone
+set(gcf, 'Color', 'w', 'Position', [210         609        1050         369])
+for i = 1:4
+    subplot_tight(2,5,i+1)
+    im = imread(tiffname1, tind(i));
+%     im = im(zooms(1):zooms(2), zooms(3):zooms(4));
+    imagesc(im, [0 255]); hold on
+%     plot(x(1:i)*4, y(1:i)*4, 'r.-')
+    title(sprintf('%d sec', round(tall(i))));
+    axis image off
+    axis([zooms]);
+    
+    subplot_tight(2,5,i+6)
+    im = imread(tiffname2, tind(i));
+%     im = imresize(im,2);
+%     im = im(zooms(1):zooms(2), zooms(3):zooms(4));
+    imagesc(im, [0 40]); hold on
+%     plot(x(1:i)*2, y(1:i)*2, 'r.-')
+    title(sprintf('%d sec', round(tall(i))));
+    axis image off
+    axis([round(zooms/2)]);
+end
+%     subplot_tight(2,100,200)
+% colorbar
+
+subplot_tight(2,5,1)
+im = imread(tiffname1, tind(1));
+imagesc(im, [0 255]); hold on
+% rectangle('Position', [zooms(1) zooms(3), zooms(2)-zooms(1), zooms(4)-zooms(3)], 'EdgeColor', 'r')
+title(sprintf('Full FOV, %d sec', round(tall(1))));
+axis image off
+
+subplot_tight(2,5,6)
+im = imread(tiffname2, tind(1));
+imagesc(im, [0 40]); hold on
+% rectangle('Position', round([zooms(1) zooms(3), zooms(2)-zooms(1), zooms(4)-zooms(3)]/2), 'EdgeColor', 'r')
+title(sprintf('SD filter, %d sec', round(tall(1))));
+axis image off
+
+
+
+
+
+
+
+
+
+
+

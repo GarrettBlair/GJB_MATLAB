@@ -125,7 +125,8 @@ for i = 1:x_fold_training
         ppm = ParforProgressbar(n_rand,'parpool', {'local'}, 'showWorkerProgress',true,...
         'progressBarUpdatePeriod',5,'title','SVM Decoding randLoop');
     end
-    parfor randLoop = 1:n_rand
+%     parfor randLoop = 1:n_rand
+    for randLoop = 1:n_rand
         [rand_pred(:,randLoop)] = predict(Mdl, test_s_rand(:, rand_spks_ord(:, randLoop)));
         if parfor_progbar == true
             pause(.001)

@@ -7,7 +7,8 @@ function [str] = pfield_split_bayesian_decoding(ms, x, y, spks, xbins, ybins, ce
 % pos_bins = params.pos_bins;
 
 t = ms.timestamps./1000;
-[spks_bin, ~]        = bin_spks_time(spks,   bin_int, ms.timestamps./1000, false);
+% [spks_bin, ~]        = bin_spks_time(spks,   bin_int, ms.timestamps./1000, false);
+[spks_bin, ~]        = average_spks_time(spks,   bin_int, ms.timestamps./1000, false, 'sum');
 [x_average, ~]       = average_spks_time(x', bin_int, ms.timestamps./1000, false, 'mean');
 [y_average, ~]       = average_spks_time(y', bin_int, ms.timestamps./1000, false, 'mean');
 [time_average, ~]    = average_spks_time(t', bin_int, ms.timestamps./1000, false, 'mean');

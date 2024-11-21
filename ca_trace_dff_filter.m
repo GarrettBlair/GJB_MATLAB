@@ -13,37 +13,56 @@ end
 if nargin < 2 || isempty(fs)
     fs = 30;
 end
-% raw = n.C(1:50:end, :)+n.YrA(1:50:end, :);
-% sm = movmedian(raw, [4,4], 2);
-% r = real(highpass(sm', .1, 30))';
-low = real(lowpass(raw_traces', lowpass_fs, fs))';
+
+%% pad the traces to remove edge effects
+[ns,nt] = size(raw_traces);
+npad = round(1/lowpass_fs);
+hpad = round(.5/lowpass_fs);
+p1 = mean(raw_traces(:,1:npad), 2);
+p2 = mean(raw_traces(:,end:-1:end-npad), 2);
+valid = cat(2, zeros(1, 1*hpad), ones(1,nt), zeros(1, 3*hpad))==1;
+padded_traces = cat(2, p1*ones(1, npad), raw_traces, p2*ones(1, npad));
+
+% low pass filter the trace
+low = real(lowpass(padded_traces', lowpass_fs, fs))';
+low = low(:, valid);
+low(:, 1:hpad) = low(:, hpad+1)*ones(1,hpad);
 % high = real(highpass(raw', 10, 30))';
 
 dff = diff(low, 1, 2);
 dff = cat(2, dff(:,1), dff);
 
 stddff = real(std_scale_rows(dff));
+stddff(stddff<std_thresh) = 0;
+dff(dff<0) = 0;
+low(low<0) = 0;
 % stddff(stddff<2 & dff<0) = 0;
 raw_filt = low;
-raw_filt(stddff<std_thresh | dff<0 | low<0) = 0;
+raw_filt(stddff==0 | dff==0 | low==0) = 0;
 raw_filt(raw_filt<0) = 0;
 dff_filt = dff;
 dff_filt(raw_filt<=0) = 0;
 
+% only take the positive values
+dff_acel = diff(dff_filt, 1, 2);
+dff_acel = cat(2, dff_acel(:,1), dff_acel);
+dff_filt(dff_acel<0) = 0;
+
 if plotting==true
     nr = normalize_rows(raw_traces);
-    nd = normalize_rows(dff_filt);
-%     s = raw_traces;
-%     s(dff_filt==0) = NaN;
-%     figure;
-%     stacked_traces(raw_traces,  .9, {'k-', 'LineWidth', 1});
-%     stacked_traces(s,           .9, {'m-', 'LineWidth', 3});
-%     
+    s = nr;%raw_traces;
+    s(dff_filt==0) = NaN;
     figure;
-    imagesc(nr + 1*(nd>0))
-%     imagesc(nr + nd)
-%     colormap(lbmap(256,'RedBlue'))
-    colormap redblue
-    drawnow
+    try
+        stacked_traces(nr(1:1:end,:),  .9, {'k-', 'LineWidth', 1});
+        stacked_traces(s(1:1:end,:),   .9, {'m.-', 'LineWidth', 1});
+    catch
+        subplot(2,1,1)
+        imagesc(nr)
+        subplot(2,1,2)
+        imagesc(s)
+    end
+    drawnow;
+
 end
 

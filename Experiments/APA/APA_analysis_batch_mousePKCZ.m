@@ -10,7 +10,10 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 % animals = {'Hipp16942'};
 % animals = {'Hipp18240'};
 % animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
-animals = {'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
+% animals = {'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
+animals = {'mHPC24457', 'mHPC24458', 'mHPC24459'};% animals = {'Acc20832', 'Acc19947'};
+% animals = {'mHPC24459'};% animals = {'Acc20832', 'Acc19947'};
+animals = {'mHPC24458'};% animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
 analysis_version = 'v1.61';
 dir_list_fname = '_directory_list.csv';
@@ -18,19 +21,19 @@ dir_list_fname = '_directory_list.csv';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
 % experiment_folder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\PKCZ_imaging\';
 experiment_folder = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\';
-
+% experiment_folder = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/PKCZ_imaging/'
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
-rerun_behav         = true;
-rerun_place         = true;
+rerun_behav         = false;
+rerun_place         = false;
 resave_proccessed   = true;
-resave_contours     = true;
+resave_contours     = false;
 fit_contours_fullFOV= false;
 
 % params.parfor_progbar           = true; % whether to show the parfor progress figure
 
 % params.plotting                 = false;
-
+params.reuse_contour_crop = '';
 
 PRINT_ONLY = false;
 
@@ -60,6 +63,8 @@ for animalLoop = 1:numAnimals
                     ms.cameraName           = cameraName;
                     [ms]                    = extract_caiman_data(ms, params, cameraName);
                     save(behaviorFile, 'ms', 'behav', 'analysis_version', 'AnimalDir', '-v7.3');
+                else
+                    
                 end
                 fprintf('Done! ->  %s\n', behaviorFile)
                 %%%%%%%%%%%%%%%%%%%
@@ -75,7 +80,7 @@ for animalLoop = 1:numAnimals
     end % cameraLoop
 end
 %%
-for animalLoop = 1:numAnimals
+for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     animal_name = animals{animalLoop};
     dir_file            = sprintf('%s%s/%s%s', experiment_folder, animal_name, animal_name, dir_list_fname);
     for cameraLoop = 1:length(params.cameraName)
@@ -85,7 +90,7 @@ for animalLoop = 1:numAnimals
         fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
         qq = tic;
         % read in caiman data and construct rate maps
-        for sessionLoop = 1:AnimalDir.numSess
+        for sessionLoop = 1:AnimalDir.numSess %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             placecellFile       = AnimalDir.placecellFile{sessionLoop};
             camFolderExists = isfolder([AnimalDir.SessionDir{sessionLoop} cameraName]);
             run_this_sess = isempty(dir(placecellFile)) == true || rerun_place==true;
@@ -96,14 +101,20 @@ for animalLoop = 1:numAnimals
                     %
                     load(behaviorFile, 'ms');
                     
-                    ms.spks = normalize_rows(ms.neuron.S_mat);
+                    raw_traces = ms.neuron.C + ms.neuron.YrA;
+                    [dff_filt, ~] = ca_trace_dff_filter(raw_traces, 30, .1, 1.5, false);
+
+                    ms.spks = normalize_rows(dff_filt);
                     ms.spks(isnan(ms.spks)) = 0;
+                    clearvars dff_filt raw_filt raw_traces
+%                     ms.spks = normalize_rows(ms.neuron.S_mat);
+%                     ms.spks(isnan(ms.spks)) = 0;
 
                     [ms] = APA_generate_placemaps(ms, params);
                     
-                    [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
-                    [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
-                    [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
+%                     [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
+%                     [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
+%                     [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
                     
                     save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
@@ -118,7 +129,7 @@ for animalLoop = 1:numAnimals
         
         % resave processed files to single directory
         %%
-        if resave_proccessed == true
+%         if resave_proccessed == true
         for sessionLoop = 1:AnimalDir.numSess
             processedFile   = AnimalDir.processedFile{sessionLoop};
             if isempty(dir(processedFile)) == true || resave_proccessed==true
@@ -157,7 +168,7 @@ for animalLoop = 1:numAnimals
 %                 fprintf('~~~SPIKE file creation skipped: %s\n', AnimalDir.Sessname{sessionLoop})
 %             end
         end
-        end
+%         end
         % saving contour files
         for sessionLoop = 1:AnimalDir.numSess
             contourFile = AnimalDir.contourFile{sessionLoop};

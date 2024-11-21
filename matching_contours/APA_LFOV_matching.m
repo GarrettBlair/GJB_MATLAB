@@ -1,3 +1,37 @@
+%%
+% topdir = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/'; %PKCZ_imaging/'
+topdir = 'E:\RecordingData\GarrettBlair\';
+expt_name = 'PKCZ_imaging';
+aname = 'mHPC24458';
+% aname = 'mHPC23459';
+dataDir = [topdir expt_name '\' aname '\processed_files'];
+region = 'HPC';
+saveDir = [topdir expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+file_str = ['*_' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [4, 12, 14], [2])
+cd(saveDir)
+% next do cell reg
+Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'])
+
+%% 4/4/2024  -  4/11/2024 HPCACC 24504 24505 24514
+expt_name = 'APA';
+% aname = 'HPCACC24500';
+aname = 'HPCACC24505'; % 'HPCACC24514';
+region = 'ACC'; % 'HPC';
+% dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files_OFCON'];
+% saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours_OFCON\manual_alignment_' region '\'];
+dataDir = ['D:\GarrettBlair\' expt_name '\' aname '\processed_files'];
+saveDir = ['D:\GarrettBlair\' expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+% region = 'HPC';
+file_str = ['*_' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+cd(saveDir)
+% do this after CellReg alignment
+% Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'])
+
+%%
 expt_name = 'PKCZ_imaging';
 aname = 'mHPC23454';
 % aname = 'mHPC23459';

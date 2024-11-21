@@ -34,14 +34,16 @@ end
 baddt = (dt./median(dt)) >= 3;
 dt(baddt) = median(dt);
 
-[spks_bin, group] = bin_spks_time(spks, integration_time, to, false);
+% [spks_bin, group] = bin_spks_time(spks, integration_time, to, false);
+[spks_bin, group] = average_spks_time(spks, integration_time, to, false, 'sum');
 
-spks_bin = normalize_rows(spks_bin);
+% spks_bin = normalize_rows(spks_bin);
 
 x_av = average_spks_time(xo', integration_time, to, false, 'mean');
 y_av = average_spks_time(yo', integration_time, to, false, 'mean');
 t_av = average_spks_time(to', integration_time, to, false, 'mean');
-[dt_av, ~] = bin_spks_time(dt', integration_time, to, false);
+[dt_av, ~] = average_spks_time(dt', integration_time, to, false, 'sum');
+% [dt_av, ~] = bin_spks_time(dt', integration_time, to, false);
 
 
 [vmap, countmap, xbin, ybin]        = make_occupancymap_2D(x_av, y_av, dt_av, binsx, binsy);

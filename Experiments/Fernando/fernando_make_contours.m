@@ -22,6 +22,8 @@ ddirs = {'G:/.shortcut-targets-by-id/1mQqRDGRSlffLsw4MnHKbIatTEeGRdoaY/miniscope
 savedir = 'E:/RecordingData/Fernando/';
 cmn_name = 'caiman_cnmfe_out';
 miniscopeName    = 'My_V4_Miniscope';
+behav_name = 'extracted_pos';
+webcamName    = 'My_WebCam';
 
 params = [];
 params.smin_vals                = -50:5:-10; % smin values used to create the 'deconv_sweep.mat'
@@ -35,6 +37,30 @@ params.cameraName               = {miniscopeName};%, 'ACC_miniscope2'}; % will d
 % params.reuse_contour_crop       = 'Crop_params.mat'; % use the previous ms file contour crop, unless empty
 params.reuse_contour_crop       = 'bounding_box.mat'; % use the previous ms file contour crop, unless empty
 %%
+for i = 1:length(ddirs)
+    %%
+    recording_dir   = ddirs{i};
+    f = ddirs{i}(84:end);
+    inds = strfind(f, '/');
+    sess_name = f(1:inds(1)-1);
+    fname_ms = [savedir 'ms_data/' sess_name '.mat'];
+    behav_file = [recording_dir webcamName '/' behav_name '.mat'];
+    fname_new = [savedir 'ms_data_simple/' sess_name '.mat'];
+    
+    if isfile(fname_ms) && ~isfile(fname_new)
+        %%
+        if isfile(behav_file)
+        fprintf('LOAD - %s\n', fname_ms)
+        simple_file_subfcn(fname_ms, behav_file, fname_new)
+        else
+           warning('no behav %s', behav_file) 
+        end
+    else
+        fprintf('SKIP - %s\n', fname_ms)
+    end
+end
+%%
+if false
 for i = 1:length(ddirs)
     %%
     recording_dir   = ddirs{i};
@@ -117,9 +143,9 @@ for i = 1:length(ddirs)
         fprintf('skip %s\n', contours_out)
     end
 end
-
+end
 %%
-
+if false
 cellregdirs = {'E:/RecordingData/Fernando/contours/cellreg_A/',...
     'E:/RecordingData/Fernando/contours/cellreg_B/',...
     'E:/RecordingData/Fernando/contours/cellreg_C/',...
@@ -171,6 +197,7 @@ ylabel('Percent of cells matched')
 set(gca, 'XTick', [1,2,3], 'XTickLabel', {'>=1', '>=2', '>=3'}, 'YTick', [.2:.2:1])
 xlabel('# of Sessions')
 ttest(o123(:,1), o123(:,3))
+end
 %%
 function [ms] = make_ms_struct(recording_dir, msTSFile, cameraName)
 global params_sub
@@ -246,5 +273,81 @@ ms.ori.time = ori_ts;
 ms.ori.roll = roll; 
 ms.ori.pitch = pitch; 
 ms.ori.yaw = yaw;
+
+end
+
+function simple_file_subfcn(ms_file, behav_file, newname)
+%%
+% ind1 = strfind(filename, 'processed_files')+length('processed_files') + 1;
+% ind2 = strfind(filename, '.mat')+length('.mat') - 1;
+% newname = ['D:\GarrettBlair\APA\HPCACC24500\simple_files\' filename(ind1:ind2)];
+load(ms_file, 'ms')
+behav = load(behav_file);
+
+vars2save = {'parentDir' 'ms_file' 'behav_file' 'time_ms' 'dt_ms' 'good_ms_frames' 'frameNum'...
+    'mousex' 'mousey' 'mouse_ecc' 'ledx' 'ledy' 'headangle' 'barx'...
+    'mouse_spd_pxsec' 'led_spd_pxsec' 'bar_spd_pxsec' 'craw' 'spks'};
+
+
+if contains(behav.beh.parentDir(4:end), ms.parentDir(5:end)) == true
+parentDir = ms.parentDir;
+time_ms = single(ms.timestamps);
+dt_ms   = single(ms.dt);
+good_ms_frames   = ms.goodFrames;
+frameNum = behav.beh.frameNum+1;
+
+behav_t = behav.beh.timestamps;
+behav_dt = behav.beh.dt;
+mousex   = single(behav.mouse.x);
+mousey   = single(behav.mouse.y);
+mouse_ecc   = single(behav.mouse.ecc);
+ledx   = single(behav.led.x);
+ledy   = single(behav.led.y);
+
+% a = rad2deg(atan2( mousey-ledy, ledx-mousex));
+headangle = rad2deg(atan2( ledy-mousey, ledx-mousex));
+
+% for i = 1:4:10000;
+%     figure(1); clf
+%     hold on
+%     plot(mousex(1:i), mousey(1:i), 'k')
+%     plot(ledx(i), ledy(i), 'ro')
+%     plot([ mousex(i) mousex(i)+cosd(a(i))*10], [ mousey(i) mousey(i)+sind(a(i))*10], 'r-')
+%     axis([0 600 0 150])
+%     title(a(i))
+%     drawnow
+%     pause(.1)
+% end
+barx   = single(behav.barpos(frameNum));
+
+mouse_spd_pxsec = speed_calc_gb(mousex, mousey)./(behav_dt);
+led_spd_pxsec = speed_calc_gb(ledx, ledy)./(behav_dt);
+bar_spd_pxsec = speed_calc_gb(barx, barx*0)./(behav_dt);
+
+mousex = interp1(behav_t, mousex, time_ms, 'linear');
+mousey = interp1(behav_t, mousey, time_ms, 'linear');
+mouse_ecc = interp1(behav_t, mouse_ecc, time_ms, 'linear');
+ledx = interp1(behav_t, ledx, time_ms, 'linear');
+ledy = interp1(behav_t, ledy, time_ms, 'linear');
+headangle = interp1(behav_t, headangle, time_ms, 'linear');
+barx = interp1(behav_t, barx, time_ms, 'linear');
+mouse_spd_pxsec = interp1(behav_t, mouse_spd_pxsec, time_ms, 'linear');
+led_spd_pxsec = interp1(behav_t, led_spd_pxsec, time_ms, 'linear');
+bar_spd_pxsec = interp1(behav_t, bar_spd_pxsec, time_ms, 'linear');
+
+
+raw_traces = ms.neuron.C + ms.neuron.YrA;
+[dff_filt, ~] = ca_trace_dff_filter(raw_traces, round(1/median(dt_ms)), .1, 1.5, false);
+spks = normalize_rows(dff_filt);
+spks(isnan(spks)) = 0;
+spks    = single(spks);
+craw    = single(normalize_rows(raw_traces));
+
+save(newname, vars2save{:})
+else
+    error('file mismatch!')
+end
+
+
 
 end
