@@ -19,7 +19,50 @@ ddirs = {'G:/.shortcut-targets-by-id/1mQqRDGRSlffLsw4MnHKbIatTEeGRdoaY/miniscope
         'G:/.shortcut-targets-by-id/1mQqRDGRSlffLsw4MnHKbIatTEeGRdoaY/miniscope_v4/Mov_Grid/G_baseline_6mov/camkII_mpfc/2023_09_25/17_08_13/',...
         'G:/.shortcut-targets-by-id/1mQqRDGRSlffLsw4MnHKbIatTEeGRdoaY/miniscope_v4/Mov_Grid/G_shocks_12mov/camkII_mpfc/2023_09_26/17_00_14/',...
         'G:/.shortcut-targets-by-id/1mQqRDGRSlffLsw4MnHKbIatTEeGRdoaY/miniscope_v4/Mov_Grid/G_retrieval_24mov/camkII_mpfc/2023_09_28/16_33_40/'};
-savedir = 'E:/RecordingData/Fernando/';
+%%
+topdir = 'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/';
+ddirs = {'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_hab/camkII_mpfc/2025_03_10/13_10_14/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_retrieval/camkII_mpfc/2025_03_13/11_25_13/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_retrieval_day2/camkII_mpfc/2025_03_14/15_07_29/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_retrieval_day2b/camkII_mpfc/2025_03_14/15_30_39/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_shock/camkII_mpfc/2025_03_11/14_43_12/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NA_shock/camkII_mpfc/2025_03_11/14_58_07/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NB_hab/camkII_mpfc/2025_03_10/13_28_04/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NB_retrieval/camkII_mpfc/2025_03_13/11_54_56/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NB_retrieval_day2/camkII_mpfc/2025_03_14/15_59_17/',...
+        'G:/.shortcut-targets-by-id/1BLCj3dIx9Q2KP6SQL4j-8Vo5CNepB8fz/moving_grid_no_shock/NB_shock/camkII_mpfc/2025_03_11/15_20_00/'};
+%%
+
+topdir = 'H:/My Drive/';
+ddirs = {   'H:/My Drive/1_noshock_mpfc/camkII_mpfc/2025_07_28/17_38_07/';...
+            'H:/My Drive/1_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/14_31_41/';...
+            'H:/My Drive/1_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/11_18_12/';...
+            'H:/My Drive/2_noshock_mpfc/camkII_mpfc/2025_07_28/18_01_19/';...
+            'H:/My Drive/2_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/14_49_02/';...
+            'H:/My Drive/2_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/11_42_52/';...
+            'H:/My Drive/3_noshock_mpfc/camkII_mpfc/2025_07_28/18_19_24/';...
+            'H:/My Drive/3_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/15_06_52/';...
+            'H:/My Drive/3_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/12_04_31/';...
+            'H:/My Drive/4_noshock_mpfc/camkII_mpfc/2025_07_28/18_36_22/';...
+            'H:/My Drive/4_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/15_22_01/';...
+            'H:/My Drive/4_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/12_26_12/';...
+            'H:/My Drive/5_noshock_mpfc/camkII_mpfc/2025_07_28/18_53_25/';...
+            'H:/My Drive/5_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/15_38_40/';...
+            'H:/My Drive/5_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/12_51_08/';...
+            'H:/My Drive/6_noshock_mpfc/camkII_mpfc/2025_07_28/19_16_39/';...
+            'H:/My Drive/6_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/15_59_33/';...
+            'H:/My Drive/6_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/13_15_02/';...
+            'H:/My Drive/7_noshock_mpfc/camkII_mpfc/2025_07_28/19_35_56/';...
+            'H:/My Drive/7_noshock_mpfc_acquisition/camkII_mpfc/2025_07_29/16_15_23/';...
+            'H:/My Drive/7_noshock_mpfc_retrieval/camkII_mpfc/2025_07_31/13_39_40/';...
+            'H:/My Drive/NA_noshock_mpfc/camkII_mpfc/2025_03_10/13_10_14/';...
+            'H:/My Drive/NA_noshock_mpfc_acquisition/camkII_mpfc/2025_03_11/14_58_07/';...
+            'H:/My Drive/NA_noshock_mpfc_retrieval/camkII_mpfc/2025_03_13/11_25_13/';...
+            'H:/My Drive/NB_noshock_mpfc/camkII_mpfc/2025_03_10/13_28_04/';...
+            'H:/My Drive/NB_noshock_mpfc_acquisition/camkII_mpfc/2025_03_11/15_20_00/';...
+            'H:/My Drive/NB_noshock_mpfc_retrieval/camkII_mpfc/2025_03_13/11_54_56/'};
+    
+savedir = 'F:/Fernando/noshock_mpfc/';
 cmn_name = 'caiman_cnmfe_out';
 miniscopeName    = 'My_V4_Miniscope';
 behav_name = 'extracted_pos';
@@ -37,10 +80,11 @@ params.cameraName               = {miniscopeName};%, 'ACC_miniscope2'}; % will d
 % params.reuse_contour_crop       = 'Crop_params.mat'; % use the previous ms file contour crop, unless empty
 params.reuse_contour_crop       = 'bounding_box.mat'; % use the previous ms file contour crop, unless empty
 %%
+if false
 for i = 1:length(ddirs)
     %%
     recording_dir   = ddirs{i};
-    f = ddirs{i}(84:end);
+    f = ddirs{i}(length(topdir)+1:end);
     inds = strfind(f, '/');
     sess_name = f(1:inds(1)-1);
     fname_ms = [savedir 'ms_data/' sess_name '.mat'];
@@ -59,12 +103,13 @@ for i = 1:length(ddirs)
         fprintf('SKIP - %s\n', fname_ms)
     end
 end
+end
 %%
-if false
+if true
 for i = 1:length(ddirs)
     %%
     recording_dir   = ddirs{i};
-    f = ddirs{i}(84:end);
+    f = ddirs{i}(length(topdir)+1:end);
     inds = strfind(f, '/');
     sess_name = f(1:inds(1)-1);
     contours_out = [savedir 'contours/' sess_name '.mat'];
@@ -75,7 +120,19 @@ for i = 1:length(ddirs)
     msCropFile = sprintf('%s%s/Crop_params.mat', recording_dir, miniscopeName);
     msOriFile = sprintf('%s%s/headOrientation.csv', recording_dir, miniscopeName);
     msBadFramesFile = sprintf('%s%s/badFrames.mat', recording_dir, miniscopeName);
-    crop_params = load(msCropFile);
+    try
+        crop_params = load(msCropFile);
+    catch % these were used for all data, just to crop ROI data
+        %             crop_params = all_crop_params;
+        temp = load(caimanFilename);
+        warning('Using default crop params')
+        crop_params.cropROI = [];
+        crop_params.spatialDownSample = 2;
+        crop_params.temporalDownSample = 1;
+        crop_params.totalFrames = length(temp.C);
+        crop_params.tiffStackout = temp.filename;
+        crop_params.frame_filter_size = 3;
+    end
     params_sub = params;
     params_sub.crop_params  = crop_params;
     
@@ -93,11 +150,11 @@ for i = 1:length(ddirs)
 %         drawnow
         
         % Read in the coresponding files
-        crop_params = load(msCropFile);
         params_sub.crop_params  = crop_params;
         % Generate the miniscope structure
         if isfile(msTSFile)
-            [ms] = make_ms_struct(recording_dir, msTSFile, miniscopeName);
+            %%
+            [ms] = make_ms_struct(recording_dir, msTSFile, miniscopeName, params_sub);
         else
             error('No timestamp.csv file in directory:\n\t %s', recording_dir);
         end
@@ -120,12 +177,17 @@ for i = 1:length(ddirs)
             warning('No BNO data:\n\t %s', msOriFile);
             ms.ori = [];
         end
-        
+        %%
         ms.params               = params_sub;
         ms.cameraName           = miniscopeName;
         [ms]                    = extract_caiman_data(ms, ms.params, ms.cameraName);
-        cmn = ms.neuron;
-        ms = rmfield(ms, 'neuron');
+%         cmn = ms.neuron;
+        
+        raw_traces = ms.neuron.C + ms.neuron.YrA;
+        [dff_filt, ~] = ca_trace_dff_filter(raw_traces, 30, .1, 1.5, false);
+        ms.spks = normalize_rows(dff_filt);
+        ms.spks(isnan(ms.spks)) = 0;
+%         ms = rmfield(ms, 'neuron');
         save(fname_out, 'ms')
         clearvars temp ms cmn
     else
@@ -143,6 +205,70 @@ for i = 1:length(ddirs)
         fprintf('skip %s\n', contours_out)
     end
 end
+end
+
+%%
+topdir = 'F:\Fernando\noshock_mpfc\contours\';
+msdir = 'F:\Fernando\noshock_mpfc\ms_data\';
+outdir = 'F:\Fernando\noshock_mpfc\contours\contours_aligned\';
+anames = {'1' '2' '3' '4' '5' '6' '7' 'NA' 'NB'};
+sessnames = {'_noshock_mpfc' '_noshock_mpfc_acquisition' '_noshock_mpfc_retrieval'};
+thresh = .4; % .4
+if false
+    for aa = 1:length(anames)
+        conts = {};
+        bgs = {};
+        for ss = 1:length(sessnames)
+            contour_file = sprintf('%s%s%s', topdir, anames{aa}, sessnames{ss});
+            ms_file = sprintf('%s%s%s', msdir, anames{aa}, sessnames{ss});
+            temp = load(contour_file);
+            tempms = load(ms_file);
+            %         s1 = temp.A;
+            %         [nsegs1, h1, w1] = size(s1);
+            %         max_pixels = 0;
+            %         [s1, bads] = norm_A_conts(s1, .4, max_pixels);
+            %         conts(ss) = s1;
+            c = temp.contours;
+            for cc = 1:size(c,1)
+                c1 = squeeze(c(cc,:,:));
+                c1 = normalize_matrix(c1);
+                c1(c1<=thresh) = 0;
+                c1 = normalize_matrix(c1);
+                c(cc,:,:) = c1;
+            end
+            conts{ss} = c;
+            im = double(imread(tempms.ms.fileName));
+            %         im(im<quantile(im(:), .15)) = 0;
+            im = normalize_matrix(im);
+            %         im = (im./max(im(:)));
+            bgs{ss} = im;
+        end
+        nsegs2show=[];
+        [contours_shifted, projections_shifted, down_right_corrections, scaling_corrections] = manual_contour_matching_footprints_only(conts, [], [], nsegs2show, [], bgs);
+        %         fprintf('\n__________________\n\t%s', animals(aLoop))
+        %%
+        for ss = 1:length(contours_shifted)
+            aligned_fn = sprintf('%s%s%s', outdir, anames{aa}, sessnames{ss});
+            sessname = sprintf('%s%s', anames{aa}, sessnames{ss});
+            fprintf('\n__________________\n\t%s', sessname)
+            contours = contours_shifted{ss};
+            vars2save = {'contours', 'sessname'};
+            save(aligned_fn, vars2save{:})
+        end
+    end
+end
+%%
+for aa = 1:length(anames)
+    cellreg = sprintf('%scellreg_%s\\cellRegistered*', outdir, anames{aa});
+    fs = dir(cellreg);
+    cellreg_file = load(sprintf('%scellreg_%s\\%s', outdir, anames{aa}, fs.name));
+    cmap = cellreg_file.cell_registered_struct.cell_to_index_map;
+    sessFiles = {};
+    for ss = 1:length(sessnames)
+        sessFiles{ss} = sprintf('%s%s', anames{aa}, sessnames{ss});
+    end
+    fname = sprintf('%s%s_noshock_matching_matrix.mat', 'F:\Fernando\noshock_mpfc\ms_data\', anames{aa});
+    save(fname, 'cmap', 'sessFiles')
 end
 %%
 if false
@@ -199,8 +325,8 @@ xlabel('# of Sessions')
 ttest(o123(:,1), o123(:,3))
 end
 %%
-function [ms] = make_ms_struct(recording_dir, msTSFile, cameraName)
-global params_sub
+function [ms] = make_ms_struct(recording_dir, msTSFile, cameraName, params_sub)
+% global params_sub
 TS_data = readtable(msTSFile);
 if strcmp(TS_data.Properties.VariableNames{1}, 'Var1') % timestamps file was resaved after removing bad frames and col names were not saved
     TS_data.Properties.VariableNames = {'FrameNumber', 'TimeStamp_ms_', 'Buffer'};

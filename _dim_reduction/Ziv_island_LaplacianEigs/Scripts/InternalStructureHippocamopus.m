@@ -36,7 +36,7 @@ TimeVec=TimeVec(legitimacy_vec);
 %% Dimentionality Reduction
 rand('seed',0)
 % ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames,p_neighbors_vec);
-ReducedDataArray=DimentionalityReduction_Ver1(craw,p_neighbors_vec);
+ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames',p_neighbors_vec);
 
 v2=ReducedDataArray{3};
 

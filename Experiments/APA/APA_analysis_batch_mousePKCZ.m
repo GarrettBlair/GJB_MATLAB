@@ -11,21 +11,24 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 % animals = {'Hipp18240'};
 % animals = {'mHPC23454', 'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
 % animals = {'mHPC23459'};% animals = {'Acc20832', 'Acc19947'};
-animals = {'mHPC24457', 'mHPC24458', 'mHPC24459'};% animals = {'Acc20832', 'Acc19947'};
+animals = {'mHPC24458'};%, 'mHPC24459'};% animals = {'Acc20832', 'Acc19947'};
 % animals = {'mHPC24459'};% animals = {'Acc20832', 'Acc19947'};
-animals = {'mHPC24458'};% animals = {'Acc20832', 'Acc19947'};
+% animals = {'mHPC24458'};% animals = {'Acc20832', 'Acc19947'};
 numAnimals = length(animals);
 analysis_version = 'v1.61';
 dir_list_fname = '_directory_list.csv';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_aquisition/';
 % experiment_folder = 'C:/Users/gjb326/Desktop/RecordingData/GarrettBlair/APA_water/';
 % experiment_folder = 'C:\Users\gjb326\Desktop\RecordingData\GarrettBlair\PKCZ_imaging\';
-experiment_folder = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\';
+% experiment_folder = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\';
+% experiment_folder = 'E:\RecordingData\GarrettBlair\PKCZ_imaging\';
+
+experiment_folder = 'F:\GarrettBlair\APA\PCKZ_imaging\';
 % experiment_folder = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/PKCZ_imaging/'
 DAT_Dir             = sprintf('%sDAT_files/', experiment_folder);
 
 rerun_behav         = false;
-rerun_place         = false;
+rerun_place         = true;
 resave_proccessed   = true;
 resave_contours     = false;
 fit_contours_fullFOV= false;
@@ -35,7 +38,7 @@ fit_contours_fullFOV= false;
 % params.plotting                 = false;
 params.reuse_contour_crop = '';
 
-PRINT_ONLY = false;
+PRINT_ONLY = true;
 
 %% to add
 %
@@ -54,7 +57,7 @@ for animalLoop = 1:numAnimals
             run_this_sess = isempty(dir(behaviorFile)) == true || rerun_behav==true;
             if run_this_sess==true && camFolderExists==true
                 %%%%%%%%%%%%%%%%%%%
-                fprintf('~~~BEHAV analysis beginning: %s...', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~BEHAV analysis beginning: %s... [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
                 fprintf('\n%s\n...', AnimalDir.SessionDir{sessionLoop})
                 %
                 if PRINT_ONLY==false
@@ -73,14 +76,14 @@ for animalLoop = 1:numAnimals
             elseif run_this_sess==true && camFolderExists==false
                 warning('~~~BEHAV analysis skipped, no cam found: \n\t%s\n', [AnimalDir.SessionDir{sessionLoop} cameraName])
             else
-                fprintf('~~~BEHAV analysis skipped: %s\n', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~BEHAV analysis skipped: %s [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
             end
         end % sessionLoop 
         %
     end % cameraLoop
 end
 %%
-for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for animalLoop = 2%:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     animal_name = animals{animalLoop};
     dir_file            = sprintf('%s%s/%s%s', experiment_folder, animal_name, animal_name, dir_list_fname);
     for cameraLoop = 1:length(params.cameraName)
@@ -90,12 +93,12 @@ for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
         qq = tic;
         % read in caiman data and construct rate maps
-        for sessionLoop = 1:AnimalDir.numSess %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        for sessionLoop = 11:12%1:AnimalDir.numSess %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             placecellFile       = AnimalDir.placecellFile{sessionLoop};
             camFolderExists = isfolder([AnimalDir.SessionDir{sessionLoop} cameraName]);
             run_this_sess = isempty(dir(placecellFile)) == true || rerun_place==true;
             if run_this_sess==true && camFolderExists==true
-                fprintf('~~~PCELL analysis beginning: %s...\n', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~PCELL analysis beginning: %s... [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
                 behaviorFile        = AnimalDir.behaviorFile{sessionLoop};
                 if PRINT_ONLY==false
                     %
@@ -112,9 +115,9 @@ for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                     [ms] = APA_generate_placemaps(ms, params);
                     
-%                     [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
-%                     [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
-%                     [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
+                    [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
+                    [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
+                    [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
                     
                     save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
@@ -122,7 +125,7 @@ for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 fprintf(' \nDone!\n\t\t%s\n', placecellFile)
                 toc(qq)
             else
-                fprintf('~~~PCELL analysis skipped: %s\n', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~PCELL analysis skipped: %s [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
             end
             fprintf('\t\ttime: %s  \n\t\tsession process time -- %.0f seconds\n\n', datetime(), toc(qq))
         end % sessionLoop
@@ -130,10 +133,10 @@ for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         % resave processed files to single directory
         %%
 %         if resave_proccessed == true
-        for sessionLoop = 1:AnimalDir.numSess
+        for sessionLoop = 11:12%1:AnimalDir.numSess
             processedFile   = AnimalDir.processedFile{sessionLoop};
             if isempty(dir(processedFile)) == true || resave_proccessed==true
-                fprintf('~~~PROCESSED file creation: %s...', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~PROCESSED file creation: %s... [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
                 placecellFile       = AnimalDir.placecellFile{sessionLoop};
                 %
                 if PRINT_ONLY==false && isfile(placecellFile)
@@ -141,9 +144,9 @@ for animalLoop = 1:numAnimals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                     save(processedFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');
                 end
                 %
-                fprintf(' Done!\n\t\t%s\n', processedFile)
+                fprintf('\t%s\n\tDone!\n\n', processedFile)
             else
-                fprintf('~~~PROCESSED file creation skipped: %s\n', AnimalDir.Sessname{sessionLoop})
+                fprintf('~~~PROCESSED file creation skipped: %s [%d]\n', AnimalDir.Sessname{sessionLoop}, sessionLoop)
             end % resave processed files to single directory
             
 %             spikeFile       = AnimalDir.spikeFile{sessionLoop};

@@ -23,7 +23,7 @@ test_inds               = NaN(nsamples, 1);
 
 decode_2d = iscell(predict_var) == true;
 if decode_2d == false 
-[str_in.counts, ~,  str_in.var_binned(:)] = histcounts(predict_var, predict_bins);
+    [str_in.counts, ~,  str_in.var_binned(:)] = histcounts(predict_var, predict_bins);
     str_in.bin_center = predict_bins(2:end) - abs(diff(predict_bins))/2;
 
 else
@@ -219,8 +219,8 @@ else
             end
     end
 end
-
+if n_rand>1
 str_in.pred_rand = str_in.pred_rand(:, 1); % to reduce size of save file; just keep one example
-
+end
     
 end

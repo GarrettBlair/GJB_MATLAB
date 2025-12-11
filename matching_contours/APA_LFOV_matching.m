@@ -1,3 +1,50 @@
+%% HPCACC34990
+% topdir = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/'; %PKCZ_imaging/'
+topdir = 'D:\GarrettBlair\';
+expt_name = 'APA';
+aname ='HPCACC34990'; % 'mHPC24458'; % 
+% aname = 'mHPC23459';
+dataDir = [topdir expt_name '\' aname '\processed_files'];
+region = 'HPC';
+saveDir = [topdir expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+file_str = ['*' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+cd(saveDir)
+% next do cell reg
+% CellReg;
+Setup_matching_marix([saveDir '\cellreg_subIL\'], [dataDir '\cellmatching_' region '.mat'], true)
+% Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\matching_matrix.mat'], true)
+
+%% 24457 and 24458 for Andy
+% topdir = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/'; %PKCZ_imaging/'
+topdir = 'F:\GarrettBlair\APA\';
+expt_name = 'PKCZ_imaging';
+aname ='mHPC24457'; % 'mHPC24458'; % 
+% aname = 'mHPC23459';
+dataDir = [topdir expt_name '\' aname '\processed_files'];
+region = 'HPC';
+saveDir = [topdir expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
+file_str = ['*_' region '_miniscope*'];
+
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [])
+cd(saveDir)
+% next do cell reg
+CellReg;
+% Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'], true)
+Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\matching_matrix.mat'], true)
+
+%% Fernando control mice
+topdir = 'E:\RecordingData\Fernando\';
+aname = 'NB';
+% aname = 'mHPC23459';
+dataDir = [topdir 'ms_data\'];
+saveDir = [topdir '\contours\manual_alignment\'];
+file_str = [aname '_*'];
+
+% manual_contour_matching(dataDir, saveDir, aname, file_str, [], [], [1])
+% cd(saveDir)
+Setup_matching_marix([saveDir '\cellreg_' aname '\'], [dataDir '\' aname '_matching_matrix.mat'], true)
 %%
 % topdir = '\\sshfs.r/garrettb@monk.cns.nyu.edu/f/fentonlab/RAWDATA/CaImage/GarrettBlair/ImagingData/'; %PKCZ_imaging/'
 topdir = 'E:\RecordingData\GarrettBlair\';
@@ -9,10 +56,12 @@ region = 'HPC';
 saveDir = [topdir expt_name '\' aname '\matching_contours\manual_alignment_' region '\'];
 file_str = ['*_' region '_miniscope*'];
 
-manual_contour_matching(dataDir, saveDir, aname, file_str, [], [4, 12, 14], [2])
+manual_contour_matching(dataDir, saveDir, aname, file_str, [], [4, 11, 12, 14], [2])
 cd(saveDir)
 % next do cell reg
-Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'])
+CellReg;
+% Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\cellmatching_' region '.mat'], true)
+Setup_matching_marix([saveDir '\cellreg\'], [dataDir '\matching_matrix.mat'], true)
 
 %% 4/4/2024  -  4/11/2024 HPCACC 24504 24505 24514
 expt_name = 'APA';

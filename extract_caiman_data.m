@@ -11,18 +11,25 @@ caiman_data = load(caimanFilename);
 [nsegs,nframes] = size(caiman_data.C);
 
 
-
-[smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
+if isfile(sminSweepFilename)
+    [smat, smat_weighted, good_idx, ~] = deconv_sweep_read(sminSweepFilename, params.smin_vals);
     all_good_idx = find(sum(good_idx,1)>0);
     bad_idx = setdiff(1:size(caiman_data.C,1), all_good_idx);
     caiman_data.good_idx_smat = good_idx;
     caiman_data.idx_components = all_good_idx;
     caiman_data.idx_components_bad = bad_idx;
-
-temp = sum(smat, 1);
-caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
-temp = sum(smat_weighted, 1);
-caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
+    
+    temp = sum(smat, 1);
+    caiman_data.S_mat = reshape(temp, [nsegs, nframes]);
+    temp = sum(smat_weighted, 1);
+    caiman_data.S_matw = reshape(temp, [nsegs, nframes]);
+else
+    caiman_data.good_idx_smat = caiman_data.idx_components+1;
+    caiman_data.idx_components = caiman_data.idx_components+1;
+    caiman_data.idx_components_bad = caiman_data.idx_components_bad+1;
+    caiman_data.S_mat = false(nsegs, nframes);
+    caiman_data.S_matw = false(nsegs, nframes);
+end
 
 if length(ms.timestamps) ~= nframes || length(ms.frameNum) ~= nframes
     warning('!~!~! Frame number discrepancy found between ms and caiman files!')
@@ -52,6 +59,7 @@ if ~isempty(params.reuse_contour_crop)
     else
         prev_judgement = [];
     end
+%     prev_judgement = [];
     if isfield(prev_judgement, 'valid_contour_bounds')
         valid_contour_bounds = prev_judgement.valid_contour_bounds;
         draw_bounds = false;

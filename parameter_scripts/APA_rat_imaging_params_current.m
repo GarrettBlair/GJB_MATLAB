@@ -9,15 +9,15 @@ params.behav_fps                = 30;
 params.behav_smoothing_interval = .25; % in seconds, length of smoothing kernel
 
 
-params.pos_bins                 = [-45, -36:4:36, 45]; % in cm, x and y
+params.pos_bins                 = [-55, -40:5:40, 55]; % in cm, x and y
 params.yaw_bins                  = -pi:pi/8:pi;
-params.rho_bins                  = [0:10:30 45];
+params.rho_bins                  = [0:10:30 55];
 params.occupancy_thresh         = 1; % in seconds, minimum time in each bin to be counted for place map
 params.pfield_kernel_radius     = 3; % kernel ends up being [n*2 + 1] in bins
 params.smin_vals                = -50:5:-10; % smin values used to create the 'deconv_sweep.mat'
 % params.bayesian_random_shuffle  = 500;
-params.num_random_shuffle_pcell = 1;%500; 
-params.num_random_shuffle_decode= 1; 
+params.num_random_shuffle_pcell = 5;%500; 
+params.num_random_shuffle_decode= 5; 
 % params.speed_thresh             = 5; % speed thresh in cm/sec
 params.num_partitions           = 2;
 % params.max_spd_thresh           = 100;

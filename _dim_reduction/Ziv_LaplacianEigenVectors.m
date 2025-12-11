@@ -1,4 +1,4 @@
-function [ReducedDataArray, legitimacy_vec] = Ziv_LaplacianEigenVectors(neuronal_activity_mat, plotting)
+function [ReducedDataArray, legitimacy_vec, data_out] = Ziv_LaplacianEigenVectors(neuronal_activity_mat, plotting, p_neighbors_vec)
 %% Adapted by GJB from [Rubin,... Ziv et al. (2020) NatComm] methods paper
 %% This script allows performing analysis on hippocampal data. 
 
@@ -12,7 +12,9 @@ downsample_flag=0;%% orig=2, conv method; 0=no ds; 1=slicing ds
 ActvitySmoothingSize=0;%% orig=2
 % ActvitySmoothingSize=0;%%GJB
 
-p_neighbors_vec=[0.075/15 0.075];%% orig
+if nargin<3
+    p_neighbors_vec=[0.075/15 0.075];%% orig
+end
 % p_neighbors_vec=[0.075/15 0.075];%% GJB
 % p_neighbors_vec=[0.075 0.075/15];%% GJB
 % p_neighbors_vec=[4 15] %GJB 19AQ
@@ -42,8 +44,11 @@ position_per_frame = zeros(size(neuronal_activity_mat, 2), 1);
     SmoothingAndThresholdingData(position_per_frame,neuronal_activity_mat,downsample_flag,ActvitySmoothingSize,ActivityThreshold);
 %% Dimentionality Reduction
 rng('default')
-ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames,p_neighbors_vec);
-
+activity_mat_active_frames = neuronal_activity_mat;
+ReducedDataArray=DimentionalityReduction_Ver1(activity_mat_active_frames',p_neighbors_vec);
+data_out = ReducedDataArray{3};
+% data_out = NaN(size(neuronal_activity_mat,2), size(ReducedDataArray{3},2));
+% data_out(legitimacy_vec, :) = ReducedDataArray{3};
 if plotting
     
 v2=ReducedDataArray{3};

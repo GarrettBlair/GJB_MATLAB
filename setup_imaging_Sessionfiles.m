@@ -8,6 +8,7 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
 %         spikeFileString = sprintf('@spikes_%s.mat', miniscopeName);
         simpleFileString = sprintf('@placecells_%s.mat', miniscopeName);
         contourString   = sprintf('@contours_%s.mat', miniscopeName);
+        sleapfileString   = sprintf('@SMARTies_%s.mat', miniscopeName);
     else
         miniscopeName = 'MiniLFOV';
         pcellString = '@placecells.mat';
@@ -18,6 +19,11 @@ function out_struct = setup_imaging_Sessionfiles(animal_name, dir_file, experime
     processedDir        = sprintf('%s%s/processed_files/', experiment_folder, animal_name);
     if isempty(dir(processedDir)) == true
         mkdir(processedDir)
+    end
+    SLEAP_Dir        = sprintf('%s%s/sleap behavior output/', experiment_folder, animal_name);
+    hasSLEAP = false;
+    if isfolder(SLEAP_Dir) == true
+        hasSLEAP = true;
     end
 %     spikeFileDir        = sprintf('%s%s/processed_files/spikeFiles/', experiment_folder, animal_name);
 %     if isempty(dir(spikeFileDir)) == true

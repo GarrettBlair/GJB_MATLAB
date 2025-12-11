@@ -14,8 +14,8 @@ warning('off', 'MATLAB:table:ModifiedAndSavedVarnames')
 % animals = {'Hipp16942'};
 % animals = {'Hipp18240'};
 % animals = {'HPCACC24500', 'HPCACC24502', 'HPCACC24503'};% animals = {'Acc20832', 'Acc19947'};
-animals = {'HPCACC24514'};% animals = {'Acc20832', 'Acc19947'};
-experiment_folder = 'E:/GarrettBlair/APA/';
+animals = {'HPCACC34990'};% animals = {'Acc20832', 'Acc19947'};
+experiment_folder = 'D:/GarrettBlair/APA/';
 % animals = {'HPCACC24504', 'HPCACC24505'};% animals = {'Acc20832', 'Acc19947'};
 % experiment_folder = 'F:/GarrettBlair/APA/';
 numAnimals = length(animals);
@@ -50,15 +50,16 @@ for animalLoop = 1:numAnimals
     animal_name = animals{animalLoop};
     dir_file            = sprintf('%s%s/%s%s', experiment_folder, animal_name, animal_name, dir_list_fname);
     for cameraLoop = 1:length(params.cameraName)
+        %%
         cameraName = params.cameraName{cameraLoop};
         AnimalDir = setup_imaging_Sessionfiles(animal_name, dir_file, experiment_folder, cameraName);
         fprintf('\n\nSTART ANALYSIS FOR ANIMAL:       %s\n', animal_name)
         % read in behavior data from tracker
-        for sessionLoop = 1:AnimalDir.numSess
+        for sessionLoop = 1:26 % AnimalDir.numSess
             %%
             behaviorFile        = AnimalDir.behaviorFile{sessionLoop};
             camFolderExists = isfolder([AnimalDir.SessionDir{sessionLoop} cameraName]);
-            run_this_sess = isempty(dir(behaviorFile)) == true || rerun_behav==true;
+            run_this_sess   = isempty(dir(behaviorFile)) == true || rerun_behav==true;
             if run_this_sess==true && camFolderExists==true
                 %%%%%%%%%%%%%%%%%%%
                 fprintf('~~~BEHAV analysis beginning: %s...', AnimalDir.Sessname{sessionLoop})
@@ -97,6 +98,7 @@ for animalLoop = 1:numAnimals
         qq = tic;
         % read in caiman data and construct rate maps
         for sessionLoop = 1:AnimalDir.numSess
+            %%
             placecellFile       = AnimalDir.placecellFile{sessionLoop};
             camFolderExists = isfolder([AnimalDir.SessionDir{sessionLoop} cameraName]);
             run_this_sess = isempty(dir(placecellFile)) == true || rerun_place==true;
@@ -107,7 +109,7 @@ for animalLoop = 1:numAnimals
                     %
                     load(behaviorFile, 'ms');
                     if isfield(ms, 'msBadFramesFile')
-                        % remove the bade frames
+                        % remove the bad frames
                         
                     end
                     raw_traces = ms.neuron.C + ms.neuron.YrA;
@@ -120,8 +122,8 @@ for animalLoop = 1:numAnimals
                     tic
                     [ms] = APA_generate_placemaps(ms, params);
                     toc
-%                     [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
-%                     [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
+                    [ms.room.momentary_pos_info,  rtemp]  = Fenton_ipos(ms, params.ipos_int_time, 'room', params);
+                    [ms.arena.momentary_pos_info, atemp]  = Fenton_ipos(ms, params.ipos_int_time, 'arena', params);
 %                     [ms.room.svm_decoding, ms.arena.svm_decoding] = APA_within_sess_decoding(ms, params);
                     
                     save(placecellFile, 'ms', 'params', 'analysis_version', 'AnimalDir', '-v7.3');

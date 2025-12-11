@@ -2,7 +2,8 @@ ddir = "E:\RecordingData\GarrettBlair\DREADDs\DAT Files\";
 outdir = "E:\RecordingData\GarrettBlair\DREADDs\output\";
 cd('E:\RecordingData\GarrettBlair\DREADDs')
 anames = {'DRD24508','DRD24509','DRD24520','DRD24521'};
-dreadd_region = {'ACC','HPC','ACC','HPC'};
+dreadd_region = {'ACC','HPC','HPC','HPC'};
+% dreadd_region = {'ACC','HPC','ACC','HPC'};
 
 % ideas
 % performance during CCW vs CW2 in saline/c21
@@ -143,7 +144,7 @@ an_color = [an_color(2:3,:); an_color(5:6,:)];
 an_offset = linspace(-.1, .1, n);
 close all
 
-drugcenter = [0 1 2 3];
+drugcenter = [0 1 2 3 4];
 for v = 1:length(vars)
     f1 = figure(100*v); hold on
     f2 = figure(100*v+1); hold on
